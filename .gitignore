@@ -1,7 +1,15 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[codz]
+*.py[cod]
 *$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
 
 # C extensions
 *.so
@@ -64,6 +72,9 @@ db.sqlite3-journal
 # Flask stuff:
 instance/
 .webassets-cache
+*.db
+*.sqlite
+*.sqlite3
 
 # Scrapy stuff:
 .scrapy
@@ -218,3 +229,24 @@ __marimo__/
 .streamlit/secrets.toml
 
 test_mml/
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+temp_*.mml

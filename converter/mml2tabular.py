@@ -37,6 +37,33 @@ from utils.sort import sort_configs
 from tabular import write_excel, write_csvs
 
 
+def convert_numeric_strings(value):
+    """
+    尝试将字符串转换为数字 (int 或 float)。
+    如果转换失败，则返回原始值。
+    """
+    if isinstance(value, str):
+        # 尝试转换为 int
+        try:
+            # 检查是否包含小数点或科学计数法，如果是，则尝试 float
+            if '.' in value or 'e' in value.lower():
+                return float(value)
+            else:
+                return int(value)
+        except ValueError:
+            pass
+        # 尝试转换为 float (针对不带小数点但可能是浮点数的情况，或者上面没捕获的情况)
+        try:
+            return float(value)
+        except ValueError:
+            pass
+    elif isinstance(value, list):
+        return [convert_numeric_strings(item) for item in value]
+    elif isinstance(value, dict):
+        return {k: convert_numeric_strings(v) for k, v in value.items()}
+    return value
+
+
 def convert(args):
     """执行转换"""
     ensure_openpyxl()
@@ -59,9 +86,17 @@ def convert(args):
             )
             # 转回MmlConfig对象
             from utils.table import MmlConfig
-            group.configs = [MmlConfig.from_dict(d) for d in group.configs]
+            
+            # 在转回对象之前，先对字典中的值进行数字转换处理
+            processed_configs = []
+            for d in group.configs:
+                # 对字典中的每个值尝试转换
+                converted_d = {k: convert_numeric_strings(v) for k, v in d.items()}
+                processed_configs.append(converted_d)
+            
+            group.configs = [MmlConfig.from_dict(d) for d in processed_configs]
 
-    print(f"\n已对每个表的记录进行升序排序")
+    print(f"\n已对每个表的记录进行升序排序，并尝试转换数字格式")
 
     # 确定输出基础路径（不含扩展名）
     output_base = resolve_output_path(args.input_file, args.output, default_ext='')

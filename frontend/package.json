@@ -1,0 +1,18 @@
+{
+  "name": "mml-manager-frontend",
+  "version": "1.0.0",
+  "description": "MML配置管理前端",
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build"
+  },
+  "dependencies": {
+    "vue": "^2.6.14",
+    "element-ui": "^2.15.9",
+    "axios": "^0.27.2"
+  },
+  "devDependencies": {
+    "@vue/cli-service": "^5.0.8",
+    "vue-template-compiler": "^2.6.14"
+  }
+}
