@@ -34,8 +34,8 @@
       <el-upload
         class="header-upload"
         action="/api/import-mml"
-        :on-success="$emit('upload-success', $event)"
-        :on-error="$emit('upload-error', $event)"
+        @success="(r) => $emit('upload-success', r)"
+        @error="(e) => $emit('upload-error', e)"
         :before-upload="beforeUpload"
         accept=".mml"
         :show-file-list="false"

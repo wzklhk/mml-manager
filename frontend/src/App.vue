@@ -209,7 +209,8 @@ export default {
       if (this.selectedTable) this.loadConfigs()
     },
     handleUploadError(error) {
-      this.$message.error('上传失败: ' + error)
+      const msg = error?.message || (typeof error === 'string' ? error : '上传失败，请检查文件格式')
+      this.$message.error(msg)
     },
 
     handleSizeChange(size) {
