@@ -258,6 +258,9 @@
               </div>
             </el-card>
           </div>
+
+          <!-- 底部哨兵：用于触发 footer 显示 -->
+          <div ref="footerSentinel" class="footer-sentinel"></div>
         </el-main>
       </el-container>
 
@@ -284,8 +287,8 @@
       </span>
     </el-dialog>
 
-    <!-- ========== 底部（License + Copyright） ========== -->
-    <footer class="vue-footer">
+    <!-- ========== 底部（License + Copyright，滚动到底才显示） ========== -->
+    <footer v-show="showFooter" class="vue-footer">
       <div class="footer-content">
         <span class="footer-license">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="#999" style="vertical-align: -2px; margin-right: 4px;">
@@ -316,6 +319,8 @@ export default {
       loading: false,
       tableSearch: '',
       selectedRows: [],
+      showFooter: false,
+      footerObserver: null,
       pagination: {
         page: 1,
         pageSize: 20,
@@ -343,8 +348,26 @@ export default {
   },
   mounted() {
     this.loadTables()
+    this.$nextTick(() => this.setupFooterObserver())
+  },
+  beforeDestroy() {
+    if (this.footerObserver) {
+      this.footerObserver.disconnect()
+    }
   },
   methods: {
+    setupFooterObserver() {
+      const sentinel = this.$refs.footerSentinel
+      if (!sentinel) return
+      this.footerObserver = new IntersectionObserver(
+        (entries) => {
+          this.showFooter = entries[0].isIntersecting
+        },
+        { root: null, threshold: 0 }
+      )
+      this.footerObserver.observe(sentinel)
+    },
+
     handleMenuSelect(index) {
       if (index === 'overview') {
         this.backToOverview()
@@ -755,6 +778,11 @@ html, body {
 
 .footer-copyright {
   color: #888;
+}
+
+/* 底部哨兵（触发 footer 显示） */
+.footer-sentinel {
+  height: 1px;
 }
 
 /* ====== 侧边栏（Vue.js 文档风格） ====== */
