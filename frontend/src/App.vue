@@ -23,20 +23,10 @@
                 <el-button type="primary" icon="el-icon-upload">导入MML文件</el-button>
               </el-upload>
             </el-col>
-            <el-col :span="5">
-              <el-button type="success" icon="el-icon-download" @click="exportMML" :disabled="!selectedTable">导出MML</el-button>
+            <el-col :span="5" v-if="selectedTable">
+              <el-button type="success" icon="el-icon-download" @click="exportMML">导出MML</el-button>
             </el-col>
-            <el-col :span="7">
-              <el-select v-model="selectedTable" placeholder="选择表" clearable @change="onTableChange" style="width:100%">
-                <el-option
-                  v-for="t in tables"
-                  :key="t.table_name"
-                  :label="`${t.table_name} (${t.count}行)`"
-                  :value="t.table_name"
-                />
-              </el-select>
-            </el-col>
-            <el-col :span="2">
+            <el-col :span="2" v-if="selectedTable">
               <el-button icon="el-icon-refresh" @click="loadConfigs">刷新</el-button>
             </el-col>
             <el-col :span="5" v-if="selectedTable && currentColumns.length > 0">
@@ -45,13 +35,26 @@
           </el-row>
         </el-card>
 
-        <!-- 未选择表时的概览 -->
+        <!-- ========== 所有表概览 ========== -->
         <el-card v-if="!selectedTable" class="table-card">
-          <h3>所有表概览</h3>
-          <el-table :data="tables" style="width: 100%" border stripe>
+          <el-row :gutter="16">
+            <el-col :span="8">
+              <el-input
+                v-model="tableSearch"
+                placeholder="搜索表名..."
+                prefix-icon="el-icon-search"
+                clearable
+              />
+            </el-col>
+            <el-col :span="16" style="text-align: right">
+              <el-button icon="el-icon-refresh" size="small" @click="loadTables">刷新</el-button>
+            </el-col>
+          </el-row>
+          <br>
+          <el-table :data="filteredTables" style="width: 100%" border stripe>
             <el-table-column label="表名" min-width="200" sortable sort-by="table_name">
               <template slot-scope="scope">
-                <el-link type="primary" @click="selectedTable = scope.row.table_name; onTableChange()">
+                <el-link type="primary" @click="enterTable(scope.row)">
                   {{ scope.row.table_name }}
                 </el-link>
               </template>
@@ -67,16 +70,33 @@
             <el-table-column prop="created_at" label="创建时间" width="180" sortable />
             <el-table-column label="操作" width="120">
               <template slot-scope="scope">
-                <el-button size="mini" type="primary" @click="selectedTable = scope.row.table_name; onTableChange()">查看</el-button>
+                <el-button size="mini" type="primary" @click="enterTable(scope.row)">查看</el-button>
               </template>
             </el-table-column>
           </el-table>
         </el-card>
 
-        <!-- 配置列表（选中表后） -->
+        <!-- ========== 表详情（进入表后） ========== -->
         <el-card v-if="selectedTable" class="table-card">
           <template slot="header">
-            <span>{{ selectedTable }} 表</span>
+            <el-row>
+              <el-col :span="12">
+                <el-button icon="el-icon-arrow-left" size="small" @click="backToOverview">返回概览</el-button>
+                <span style="margin-left: 12px; font-size: 16px; font-weight: bold;">
+                  {{ selectedTable }} 表
+                  <el-tag size="small" type="info">{{ pagination.total }} 行</el-tag>
+                </span>
+              </el-col>
+              <el-col :span="12" style="text-align: right">
+                <el-tag
+                  v-for="col in currentColumns"
+                  :key="col"
+                  size="small"
+                  type=""
+                  style="margin: 0 2px"
+                >{{ col }}</el-tag>
+              </el-col>
+            </el-row>
           </template>
           <el-table
             :data="configs"
@@ -152,6 +172,7 @@ export default {
       selectedTable: '',
       currentColumns: [],
       loading: false,
+      tableSearch: '',
       pagination: {
         page: 1,
         pageSize: 20,
@@ -164,6 +185,13 @@ export default {
         prop: null,
         order: null
       }
+    }
+  },
+  computed: {
+    filteredTables() {
+      if (!this.tableSearch) return this.tables
+      const q = this.tableSearch.toLowerCase()
+      return this.tables.filter(t => t.table_name.toLowerCase().includes(q))
     }
   },
   mounted() {
@@ -180,17 +208,21 @@ export default {
       }
     },
 
-    // 选择表变更时
-    onTableChange() {
+    // 进入表详情
+    enterTable(row) {
+      this.selectedTable = row.table_name
+      this.currentColumns = row.columns || []
       this.pagination.page = 1
-      if (this.selectedTable) {
-        const found = this.tables.find(t => t.table_name === this.selectedTable)
-        this.currentColumns = found ? found.columns : []
-      } else {
-        this.currentColumns = []
-        this.configs = []
-      }
+      this.sort.prop = null
+      this.sort.order = null
       this.loadConfigs()
+    },
+
+    // 返回概览
+    backToOverview() {
+      this.selectedTable = ''
+      this.currentColumns = []
+      this.configs = []
     },
 
     // 排序改变
