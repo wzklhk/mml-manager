@@ -13,7 +13,8 @@
         :selected-table="selectedTable"
         :columns="currentColumns"
         :total-rows="pagination.total"
-        @back-to-overview="backToOverview"
+        :collapsed="sidebarCollapsed"
+        @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed"
       />
 
       <el-main class="vue-main">
@@ -84,6 +85,7 @@ export default {
       selectedRows: [],
       showFooter: false,
       footerObserver: null,
+      sidebarCollapsed: false,
       pagination: { page: 1, pageSize: 20, total: 0 },
       editDialogVisible: false,
       isNewRow: false,
@@ -152,6 +154,7 @@ export default {
       this.pagination.page = 1
       this.sort = { prop: null, order: null }
       this.selectedRows = []
+      this.sidebarCollapsed = false
       this.loadConfigs()
     },
 
@@ -160,6 +163,7 @@ export default {
       this.currentColumns = []
       this.configs = []
       this.selectedRows = []
+      this.sidebarCollapsed = false
     },
 
     handleSortChange({ prop, order }) {
