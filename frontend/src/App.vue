@@ -79,6 +79,7 @@
             border
             stripe
             max-height="600"
+            @sort-change="handleSortChange"
           >
             <el-table-column type="index" label="#" width="50" fixed="left" />
             <!-- 动态列 -->
@@ -87,6 +88,7 @@
               :key="col"
               :prop="'config_data.' + col"
               :label="col"
+              sortable="custom"
               min-width="120"
             />
             <el-table-column label="操作" width="160" fixed="right">
@@ -151,7 +153,11 @@ export default {
       },
       editDialogVisible: false,
       isNewRow: false,
-      editForm: {}
+      editForm: {},
+      sort: {
+        prop: null,
+        order: null
+      }
     }
   },
   mounted() {
@@ -181,6 +187,14 @@ export default {
       this.loadConfigs()
     },
 
+    // 排序改变
+    handleSortChange({ prop, order }) {
+      this.sort.prop = prop ? prop.replace('config_data.', '') : null
+      this.sort.order = order === 'ascending' ? 'asc' : order === 'descending' ? 'desc' : null
+      this.pagination.page = 1
+      this.loadConfigs()
+    },
+
     // 加载配置列表
     async loadConfigs() {
       if (!this.selectedTable) return
@@ -190,6 +204,10 @@ export default {
           page: this.pagination.page,
           page_size: this.pagination.pageSize,
           table_name: this.selectedTable
+        }
+        if (this.sort.prop) {
+          params.sort_by = this.sort.prop
+          params.sort_order = this.sort.order
         }
         const response = await axios.get('/api/configs', { params })
         this.configs = response.data.configs

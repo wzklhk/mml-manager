@@ -99,7 +99,8 @@ def get_tables_summary() -> List[Dict]:
     return result
 
 
-def get_configs(table_name: str, page: int = 1, page_size: int = 20) -> Dict:
+def get_configs(table_name: str, page: int = 1, page_size: int = 20,
+                sort_by: str = None, sort_order: str = 'asc') -> Dict:
     """
     分页获取配置列表。
     
@@ -114,7 +115,7 @@ def get_configs(table_name: str, page: int = 1, page_size: int = 20) -> Dict:
         raise ValueError(f'表 {table_name} 不存在')
 
     columns = json.loads(meta['columns_json'])
-    rows, total = mml_dao.query_rows(table_name, columns, page, page_size)
+    rows, total = mml_dao.query_rows(table_name, columns, page, page_size, sort_by, sort_order)
 
     configs = []
     for r in rows:

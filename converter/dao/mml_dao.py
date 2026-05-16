@@ -190,6 +190,8 @@ def query_rows(
     columns: List[str],
     page: int = 1,
     page_size: int = 20,
+    sort_by: str = None,
+    sort_order: str = 'asc',
 ) -> Tuple[List[Dict], int]:
     """
     分页查询。
@@ -200,13 +202,21 @@ def query_rows(
     cols_str = ', '.join(cols_quoted)
     offset = (page - 1) * page_size
 
+    # 排序
+    if sort_by and sort_by in columns:
+        sort_col = f'"{sort_by}"'
+        order = 'ASC' if sort_order.lower() == 'asc' else 'DESC'
+        order_clause = f'ORDER BY {sort_col} {order}'
+    else:
+        order_clause = 'ORDER BY rowid'
+
     with DatabaseConnection() as db:
         # 总行数
         total = db.execute(f'SELECT COUNT(*) as cnt FROM "{table_name}"').fetchone()['cnt']
 
         # 分页数据
         cursor = db.execute(
-            f'SELECT rowid, {cols_str} FROM "{table_name}" ORDER BY rowid LIMIT ? OFFSET ?',
+            f'SELECT rowid, {cols_str} FROM "{table_name}" {order_clause} LIMIT ? OFFSET ?',
             (page_size, offset)
         )
         rows = []

@@ -79,9 +79,11 @@ def get_configs():
         table_name = request.args.get('table_name', '').strip()
         page = request.args.get('page', 1, type=int)
         page_size = request.args.get('page_size', 20, type=int)
+        sort_by = request.args.get('sort_by') or None
+        sort_order = request.args.get('sort_order', 'asc')
 
         if table_name:
-            result = mml_service.get_configs(table_name, page, page_size)
+            result = mml_service.get_configs(table_name, page, page_size, sort_by, sort_order)
         else:
             # 未指定表：返回概览
             summary = {}
