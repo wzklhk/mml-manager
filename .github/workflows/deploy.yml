@@ -91,17 +91,30 @@ jobs:
   deploy:
     name: 部署到服务器
     needs: build
-    if: ${{ secrets.DEPLOY_HOST != '' }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.target_env || 'production' }}
 
     steps:
+      - name: 检查部署配置
+        id: check_config
+        run: |
+          if [ -n "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "主机: ${{ secrets.DEPLOY_HOST }}"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ 未配置 DEPLOY_HOST，跳过部署"
+            echo "请配置 Secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY"
+          fi
+
       - name: 下载构建产物
+        if: steps.check_config.outputs.configured == 'true'
         uses: actions/download-artifact@v4
         with:
           name: mml-manager-${{ github.sha }}
 
       - name: 部署到远程服务器
+        if: steps.check_config.outputs.configured == 'true'
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -113,6 +126,7 @@ jobs:
           strip_components: 0
 
       - name: 远程解压 + 重启服务
+        if: steps.check_config.outputs.configured == 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
