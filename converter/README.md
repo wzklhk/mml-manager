@@ -146,7 +146,15 @@ project/
 │   └── utils/               #   共享工具
 │
 └── frontend/                 # 前端 (Vue 2 + Element UI)
-    ├── src/App.vue           #   主页面（纯 API 调用，无跨域问题）
+    ├── src/
+    │   ├── App.vue           #   主页面（编排层：状态 + 事件分发）
+    │   └── components/
+    │       ├── VueHeader.vue      #   顶部导航栏（Logo/菜单/GitHub/导入）
+    │       ├── Sidebar.vue        #   左侧边栏（表名/列列表/折叠按钮）
+    │       ├── TableOverview.vue  #   表概览页（搜索 + 表格列表）
+    │       ├── TableDetail.vue    #   表详情页（批处理栏 + 数据表 + 分页）
+    │       ├── EditDialog.vue     #   编辑/新增对话框
+    │       └── AppFooter.vue      #   底部（License/Copyright，滚动触发）
     └── vue.config.js         #   proxy 配置（仅开发模式使用）
 ```
 
@@ -225,6 +233,19 @@ sqlite3 mydb.db "SELECT * FROM config;" --csv > data.csv
 python -m cli.to_mml data.csv -o exported.mml
 ```
 
+## Web UI 功能
+
+进入表详情后可使用 **批处理操作**：
+
+| 功能 | 说明 |
+|:-----|:------|
+| 复选框选择 | 勾选左侧复选框，工具栏显示选中数量 |
+| [批量删除] | 确认后批量删除选中的行 |
+| [批量添加] | 弹出表单新增一行 |
+| [批量导出] | 将选中行导出为单独的 .mml 文件 |
+| 侧栏折叠 | 点击 `◀` 按钮折叠左侧栏，折叠后 `▶` 标签可展开 |
+| 滚动 Footer | 滚动到页面底部才显示 MIT License + Copyright |
+
 ## Web API
 
 启动 Web 服务：
@@ -247,7 +268,8 @@ python app.py
 | POST | `/api/configs` | 新增配置 (JSON body) |
 | PUT | `/api/configs/<id>` | 更新配置 |
 | DELETE | `/api/configs/<id>` | 删除配置 |
-| POST | `/api/export-sql` | 导出当前数据为 SQL |
+| POST | `/api/configs/batch-delete` | 批量删除配置 `{table_name, ids}` |
+| POST | `/api/export-mml` | 导出为 MML（支持 `ids` 参数选中行） |
 
 ### 导入 MML 示例
 
