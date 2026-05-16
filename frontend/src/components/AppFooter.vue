@@ -10,7 +10,7 @@
         </span>
         <span class="footer-sep">·</span>
         <span class="footer-copyright">
-          &copy; {{ year }} Kaihao Wei. All rights reserved.
+          &copy; {{ year }} <a href="https://github.com/wzklhk" target="_blank" class="copyright-link">wzklhk</a>. All rights reserved.
         </span>
       </div>
     </footer>
@@ -44,4 +44,6 @@ export default {
 .footer-license { display: inline-flex; align-items: center; color: #999; }
 .footer-sep { color: #555; }
 .footer-copyright { color: #888; }
+.copyright-link { color: #aaa; text-decoration: none; transition: color 0.15s; }
+.copyright-link:hover { color: #41b883; }
 </style>
