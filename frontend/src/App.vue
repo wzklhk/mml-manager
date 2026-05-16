@@ -100,10 +100,12 @@
           <!-- 分页 -->
           <el-pagination
             @current-change="handlePageChange"
+            @size-change="handleSizeChange"
             :current-page="pagination.page"
+            :page-sizes="[10, 20, 50, 100]"
             :page-size="pagination.pageSize"
             :total="pagination.total"
-            layout="total, prev, pager, next"
+            layout="total, sizes, prev, pager, next, jumper"
             style="margin-top: 20px; text-align: right"
           />
         </el-card>
@@ -227,6 +229,13 @@ export default {
     // 上传失败
     handleUploadError(error) {
       this.$message.error('上传失败: ' + error)
+    },
+
+    // 每页条数改变
+    handleSizeChange(size) {
+      this.pagination.pageSize = size
+      this.pagination.page = 1
+      this.loadConfigs()
     },
 
     // 分页改变
