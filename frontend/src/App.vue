@@ -1,7 +1,6 @@
 <template>
   <div id="app" style="display: flex; flex-direction: column; height: 100vh;">
-    <el-container direction="vertical" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
-      <!-- ========== 顶部导航栏（Vue.js 风格） ========== -->
+      <!-- ========== 顶部导航栏 ========== -->
       <el-header class="vue-header">
         <div class="header-left">
           <div class="header-logo">
@@ -261,7 +260,6 @@
           </div>
         </el-main>
       </el-container>
-    </el-container>
 
     <!-- 编辑/新增对话框 -->
     <el-dialog
