@@ -44,12 +44,6 @@
               <i class="el-icon-upload2"></i> 导入 MML
             </el-button>
           </el-upload>
-          <el-button v-if="selectedTable" size="small" class="vue-btn-outline" @click="exportMML">
-            <i class="el-icon-download"></i> 导出
-          </el-button>
-          <el-button v-if="selectedTable && currentColumns.length > 0" size="small" type="success" @click="showAddRowDialog">
-            <i class="el-icon-plus"></i> 新增行
-          </el-button>
         </div>
       </el-header>
 
@@ -170,17 +164,59 @@
               </p>
             </div>
 
+            <!-- ===== 批处理工具栏 ===== -->
+            <el-card shadow="never" class="batch-toolbar">
+              <el-row type="flex" align="middle">
+                <el-col :span="12">
+                  <span class="batch-info" v-if="selectedRows.length > 0">
+                    已选择 <strong>{{ selectedRows.length }}</strong> 行
+                  </span>
+                  <span class="batch-info" v-else style="color: #999;">
+                    <i class="el-icon-info"></i> 勾选左侧复选框进行批处理操作
+                  </span>
+                </el-col>
+                <el-col :span="12" style="text-align: right;">
+                  <el-button
+                    size="small"
+                    type="danger"
+                    :disabled="selectedRows.length === 0"
+                    @click="batchDelete"
+                  >
+                    <i class="el-icon-delete"></i> 批量删除
+                  </el-button>
+                  <el-button
+                    size="small"
+                    type="primary"
+                    @click="showAddRowDialog"
+                  >
+                    <i class="el-icon-plus"></i> 批量添加
+                  </el-button>
+                  <el-button
+                    size="small"
+                    class="vue-btn-outline-green"
+                    :disabled="selectedRows.length === 0"
+                    @click="batchExport"
+                  >
+                    <i class="el-icon-download"></i> 批量导出
+                  </el-button>
+                </el-col>
+              </el-row>
+            </el-card>
+
+            <!-- 数据表 -->
             <el-card shadow="never" class="data-card">
               <el-table
+                ref="dataTable"
                 :data="configs"
                 style="width: 100%"
                 v-loading="loading"
                 border
                 stripe
-                max-height="600"
+                max-height="560"
                 @sort-change="handleSortChange"
-                :default-sort="{ prop: sort.prop ? 'config_data.' + sort.prop : undefined, order: sort.order === 'asc' ? 'ascending' : sort.order === 'desc' ? 'descending' : undefined }"
+                @selection-change="handleSelectionChange"
               >
+                <el-table-column type="selection" width="45" fixed="left" />
                 <el-table-column type="index" label="#" width="50" fixed="left" />
                 <!-- 动态列 -->
                 <el-table-column
@@ -260,6 +296,7 @@ export default {
       currentColumns: [],
       loading: false,
       tableSearch: '',
+      selectedRows: [],
       pagination: {
         page: 1,
         pageSize: 20,
@@ -309,6 +346,11 @@ export default {
       })
     },
 
+    // 选择行变化
+    handleSelectionChange(rows) {
+      this.selectedRows = rows
+    },
+
     // 加载表列表
     async loadTables() {
       try {
@@ -326,6 +368,7 @@ export default {
       this.pagination.page = 1
       this.sort.prop = null
       this.sort.order = null
+      this.selectedRows = []
       this.loadConfigs()
     },
 
@@ -334,6 +377,7 @@ export default {
       this.selectedTable = ''
       this.currentColumns = []
       this.configs = []
+      this.selectedRows = []
     },
 
     // 排序改变
@@ -411,6 +455,58 @@ export default {
       this.loadConfigs()
     },
 
+    // ---- 批处理操作 ----
+
+    // 批量删除
+    async batchDelete() {
+      if (this.selectedRows.length === 0) return
+      this.$confirm(
+        `确定要删除选中的 ${this.selectedRows.length} 条配置吗? 删除后不可恢复。`,
+        '批量删除',
+        {
+          confirmButtonText: '确定删除',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      ).then(async () => {
+        try {
+          const ids = this.selectedRows.map(r => r.id)
+          await axios.post('/api/configs/batch-delete', {
+            table_name: this.selectedTable,
+            ids
+          })
+          this.$message.success(`成功删除 ${ids.length} 条配置`)
+          this.selectedRows = []
+          this.loadConfigs()
+          this.loadTables()
+        } catch (error) {
+          this.$message.error('批量删除失败: ' + (error.response?.data?.error || error.message))
+        }
+      }).catch(() => {})
+    },
+
+    // 批量导出
+    async batchExport() {
+      if (this.selectedRows.length === 0) return
+      try {
+        const ids = this.selectedRows.map(r => r.id)
+        const response = await axios.post('/api/export-mml', {
+          table_name: this.selectedTable,
+          ids
+        })
+        const blob = new Blob([response.data.content], { type: 'text/plain' })
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = response.data.filename
+        a.click()
+        window.URL.revokeObjectURL(url)
+        this.$message.success(`成功导出 ${ids.length} 条配置`)
+      } catch (error) {
+        this.$message.error('导出失败: ' + (error.response?.data?.error || error.message))
+      }
+    },
+
     // 新增行对话框
     showAddRowDialog() {
       this.isNewRow = true
@@ -438,7 +534,7 @@ export default {
         })
 
         if (this.isNewRow) {
-          const response = await axios.post('/api/configs', {
+          await axios.post('/api/configs', {
             table_name: this.selectedTable,
             config_data: configData
           })
@@ -479,29 +575,6 @@ export default {
           this.$message.error('删除失败: ' + error.message)
         }
       }).catch(() => {})
-    },
-
-    // 导出MML
-    async exportMML() {
-      if (!this.selectedTable) {
-        this.$message.warning('请先选择一个表')
-        return
-      }
-      try {
-        const response = await axios.post('/api/export-mml', {
-          table_name: this.selectedTable
-        })
-        const blob = new Blob([response.data.content], { type: 'text/plain' })
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = response.data.filename
-        a.click()
-        window.URL.revokeObjectURL(url)
-        this.$message.success('导出成功')
-      } catch (error) {
-        this.$message.error('导出失败: ' + error.message)
-      }
     }
   }
 }
@@ -761,6 +834,45 @@ html, body {
 
 .data-card .el-card__body {
   padding: 16px;
+}
+
+/* ====== 批处理工具栏 ====== */
+.batch-toolbar {
+  margin-bottom: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.batch-toolbar .el-card__body {
+  padding: 12px 16px;
+}
+
+.batch-info {
+  font-size: 13px;
+  color: #555;
+}
+
+.batch-info strong {
+  color: #e6a23c;
+  font-size: 15px;
+}
+
+.vue-btn-outline-green {
+  background: transparent !important;
+  border: 1px solid #41b883 !important;
+  color: #41b883 !important;
+}
+
+.vue-btn-outline-green:hover {
+  background: rgba(65,184,131,0.08) !important;
+  color: #2c9c6f !important;
+  border-color: #2c9c6f !important;
+}
+
+.vue-btn-outline-green.is-disabled {
+  border-color: #ddd !important;
+  color: #ccc !important;
 }
 
 /* ====== 表格样式 ====== */

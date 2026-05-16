@@ -201,6 +201,40 @@ def delete_config(table_name: str, config_id: int) -> bool:
     return mml_dao.delete_row(table_name, config_id)
 
 
+def batch_delete_configs(table_name: str, ids: List[int]) -> int:
+    """批量删除配置行，返回删除数量"""
+    meta = mml_dao.get_table_meta(table_name)
+    if not meta:
+        raise ValueError(f'表 {table_name} 不存在')
+    return mml_dao.delete_rows(table_name, ids)
+
+
+def export_selected_rows(table_name: str, ids: List[int]) -> Dict:
+    """导出选中的行"""
+    meta = mml_dao.get_table_meta(table_name)
+    if not meta:
+        raise ValueError(f'表 {table_name} 不存在')
+
+    columns = json.loads(meta['columns_json'])
+    rows = mml_dao.query_rows_by_ids(table_name, ids, columns)
+    if not rows:
+        raise ValueError('没有可导出的数据')
+
+    lines = []
+    lines.append(f"-- 由MML Manager导出（选中行）\n")
+    lines.append(f"-- 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+
+    for row in rows:
+        line = format_mml_command('SET', table_name, row)
+        lines.append(line + '\n')
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return {
+        'content': ''.join(lines),
+        'filename': f'{table_name}_selected_{timestamp}.mml',
+    }
+
+
 def export_mml(table_name: Optional[str] = None) -> Dict:
     """
     导出为 MML 格式。

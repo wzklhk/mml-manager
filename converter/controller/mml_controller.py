@@ -191,14 +191,36 @@ def delete_config(config_id):
         return jsonify({'error': f'删除失败: {str(e)}'}), 500
 
 
+@api.route('/configs/batch-delete', methods=['POST'])
+def batch_delete_configs():
+    """批量删除配置行"""
+    data = request.get_json() or {}
+    table_name = data.get('table_name', '')
+    ids = data.get('ids', [])
+    if not table_name or not ids:
+        return jsonify({'error': '需要 table_name 和 ids'}), 400
+
+    try:
+        deleted = mml_service.batch_delete_configs(table_name, ids)
+        return jsonify({'message': f'成功删除 {deleted} 条配置', 'deleted': deleted})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
+    except Exception as e:
+        return jsonify({'error': f'批量删除失败: {str(e)}'}), 500
+
+
 @api.route('/export-mml', methods=['POST'])
 def export_mml():
     """导出为 MML 文件"""
     data = request.get_json() or {}
     table_name = data.get('table_name')
+    ids = data.get('ids')
 
     try:
-        result = mml_service.export_mml(table_name)
+        if ids:
+            result = mml_service.export_selected_rows(table_name, ids)
+        else:
+            result = mml_service.export_mml(table_name)
         return jsonify(result)
     except ValueError as e:
         return jsonify({'error': str(e)}), 404

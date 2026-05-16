@@ -185,6 +185,19 @@ def delete_row(table_name: str, rowid: int) -> bool:
         return cursor.rowcount > 0
 
 
+def delete_rows(table_name: str, rowids: List[int]) -> int:
+    """批量删除多行数据，返回删除的行数"""
+    if not rowids:
+        return 0
+    placeholders = ','.join(['?'] * len(rowids))
+    with DatabaseConnection() as db:
+        cursor = db.execute(
+            f'DELETE FROM "{table_name}" WHERE rowid IN ({placeholders})',
+            rowids
+        )
+        return cursor.rowcount
+
+
 def query_rows(
     table_name: str,
     columns: List[str],
@@ -260,4 +273,20 @@ def query_all_rows(table_name: str, columns: List[str]) -> List[Dict]:
 
     with DatabaseConnection() as db:
         cursor = db.execute(f'SELECT {cols_str} FROM "{table_name}" ORDER BY rowid')
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def query_rows_by_ids(table_name: str, rowids: List[int], columns: List[str]) -> List[Dict]:
+    """按 rowid 列表查询多行数据"""
+    if not rowids:
+        return []
+    cols_quoted = [f'"{c}"' for c in columns]
+    cols_str = ', '.join(cols_quoted)
+    placeholders = ','.join(['?'] * len(rowids))
+
+    with DatabaseConnection() as db:
+        cursor = db.execute(
+            f'SELECT rowid, {cols_str} FROM "{table_name}" WHERE rowid IN ({placeholders}) ORDER BY rowid',
+            rowids
+        )
         return [dict(row) for row in cursor.fetchall()]
