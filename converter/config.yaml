@@ -1,0 +1,14 @@
+# MML 转换器配置文件
+# 路径解析规则：相对路径相对于本文件所在目录
+
+server:
+  host: 0.0.0.0
+  port: 5000
+  debug: true
+
+database:
+  # 数据库文件路径（相对路径基于 config.yaml 所在目录）
+  path: mml_config.db
+
+logging:
+  level: INFO
