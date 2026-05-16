@@ -99,6 +99,34 @@ gunicorn -w 2 -b 0.0.0.0:5000 app:app
 | 启动后端 | `python app.py` | 自动提供前端 + API |
 | 单机部署 | 仅需启动 Flask | 无需 Nginx 反代，无 CORS |
 
+### GitHub Actions 一键部署
+
+项目已配置 `.github/workflows/deploy.yml`，支持两种部署方式：
+
+#### 自动部署（Push 到 main）
+
+每次 `git push origin main` 自动触发：
+1. **Build** — 安装依赖 → 构建前端 → 打包 → 上传产物
+2. **Deploy** — SSH 上传到服务器 → 解压 → 重建 venv → 重启服务
+
+#### 手动部署
+
+在 GitHub 仓库页面 → **Actions** → **一键部署** → **Run workflow**，可选择部署环境。
+
+#### 服务器配置
+
+在 GitHub 仓库 **Settings → Secrets and variables → Actions** 中配置：
+
+| Secret | 说明 | 示例 |
+|:-------|:-----|:-----|
+| `DEPLOY_HOST` | 服务器 IP/域名 | `1.2.3.4` |
+| `DEPLOY_PORT` | SSH 端口（可选，默认 22） | `22` |
+| `DEPLOY_USER` | SSH 用户名 | `root` |
+| `DEPLOY_SSH_KEY` | SSH 私钥（部署用） | 以 `-----BEGIN OPENSSH PRIVATE KEY-----` 开头 |
+| `DEPLOY_PATH` | 部署路径（可选，默认 `/opt/mml-manager`） | `/home/app/mml-manager` |
+
+> **注意**：服务器需安装 Python 3.11+、pip 和 systemd/supervisor 管理服务。
+
 ### 跨域说明
 
 - **部署模式** (Flask 统一提供)：前端 /static + API /api 同域名同端口 → **无跨域问题**

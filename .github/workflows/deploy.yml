@@ -1,0 +1,157 @@
+name: 一键部署
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: '部署环境'
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build:
+    name: 构建前端 + 打包
+    runs-on: ubuntu-latest
+    outputs:
+      artifact: mml-manager-${{ github.sha }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装前端依赖
+        run: npm ci
+        working-directory: frontend
+
+      - name: 构建前端
+        run: npm run build
+        working-directory: frontend
+        env:
+          NODE_ENV: production
+
+      - name: 安装 Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装后端依赖
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: converter
+
+      - name: 打包部署包
+        run: |
+          mkdir -p deploy
+          # 后端核心
+          cp -r converter deploy/converter
+          # 移除 venv 和 pycache
+          rm -rf deploy/converter/.venv deploy/converter/*/__pycache__ deploy/converter/__pycache__
+          # 脚本
+          cp run.sh deploy/
+          # 元信息
+          echo "${{ github.sha }}" > deploy/VERSION
+          echo "${{ github.ref_name }}" > deploy/BRANCH
+          echo "${{ github.event.head_commit.message || 'manual' }}" > deploy/COMMIT_MSG
+          # 打成 tar.gz
+          cd deploy && tar czf ../mml-manager-${{ github.sha }}.tar.gz .
+          cd ..
+          rm -rf deploy
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: mml-manager-${{ github.sha }}
+          path: mml-manager-${{ github.sha }}.tar.gz
+          retention-days: 7
+
+  # ========== 部署到服务器（需配置 Secrets） ==========
+  deploy:
+    name: 部署到服务器
+    needs: build
+    if: ${{ secrets.DEPLOY_HOST != '' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_env || 'production' }}
+
+    steps:
+      - name: 下载构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: mml-manager-${{ github.sha }}
+
+      - name: 部署到远程服务器
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: mml-manager-${{ github.sha }}.tar.gz
+          target: /tmp/
+          strip_components: 0
+
+      - name: 远程解压 + 重启服务
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT || '22' }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            APP_DIR="${{ secrets.DEPLOY_PATH || '/opt/mml-manager' }}"
+            BACKUP_DIR="${APP_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
+
+            # 备份当前版本
+            [ -d "$APP_DIR" ] && cp -r "$APP_DIR" "$BACKUP_DIR"
+
+            # 解压新版本
+            mkdir -p "$APP_DIR"
+            tar xzf "/tmp/mml-manager-${{ github.sha }}.tar.gz" -C "$APP_DIR"
+            rm -f "/tmp/mml-manager-${{ github.sha }}.tar.gz"
+
+            # 重建 venv + 装依赖
+            cd "$APP_DIR/converter"
+            python3 -m venv .venv 2>/dev/null || python3 -m venv --without-pip .venv
+            source .venv/bin/activate
+            pip install --upgrade pip -q
+            pip install -r requirements.txt -q
+
+            # 重启服务（假设用 systemd 或 supervisor）
+            if systemctl is-active --quiet mml-manager 2>/dev/null; then
+              sudo systemctl restart mml-manager
+              echo "服务已重启 (systemd)"
+            elif supervisorctl status mml-manager 2>/dev/null; then
+              supervisorctl restart mml-manager
+              echo "服务已重启 (supervisor)"
+            else
+              echo "警告：未找到 systemd/supervisor 服务，请手动启动："
+              echo "  cd $APP_DIR/converter && source .venv/bin/activate && python app.py &"
+            fi
+
+            # 清理旧备份（保留最近 3 个）
+            ls -dt ${APP_DIR}_backup_* 2>/dev/null | tail -n +4 | xargs -r rm -rf
+
+            echo "部署完成: $(cat $APP_DIR/VERSION) ($(cat $APP_DIR/BRANCH))"
