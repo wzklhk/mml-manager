@@ -49,7 +49,7 @@
         <el-card v-if="!selectedTable" class="table-card">
           <h3>所有表概览</h3>
           <el-table :data="tables" style="width: 100%" border stripe>
-            <el-table-column prop="table_name" label="表名" width="200" />
+            <el-table-column prop="table_name" label="表名" width="200" sortable />
             <el-table-column label="列" min-width="300">
               <template slot-scope="scope">
                 <el-tag v-for="col in scope.row.columns" :key="col" size="small" style="margin: 2px">
@@ -57,8 +57,8 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="count" label="行数" width="100" />
-            <el-table-column prop="created_at" label="创建时间" width="180" />
+            <el-table-column prop="count" label="行数" width="100" sortable />
+            <el-table-column prop="created_at" label="创建时间" width="180" sortable />
             <el-table-column label="操作" width="120">
               <template slot-scope="scope">
                 <el-button size="mini" type="primary" @click="selectedTable = scope.row.table_name; onTableChange()">查看</el-button>
