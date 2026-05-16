@@ -49,7 +49,13 @@
         <el-card v-if="!selectedTable" class="table-card">
           <h3>所有表概览</h3>
           <el-table :data="tables" style="width: 100%" border stripe>
-            <el-table-column prop="table_name" label="表名" width="200" sortable />
+            <el-table-column label="表名" min-width="200" sortable sort-by="table_name">
+              <template slot-scope="scope">
+                <el-link type="primary" @click="selectedTable = scope.row.table_name; onTableChange()">
+                  {{ scope.row.table_name }}
+                </el-link>
+              </template>
+            </el-table-column>
             <el-table-column label="列" min-width="300">
               <template slot-scope="scope">
                 <el-tag v-for="col in scope.row.columns" :key="col" size="small" style="margin: 2px">
