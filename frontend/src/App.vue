@@ -1,25 +1,37 @@
 <template>
-  <div id="app" style="display: flex; flex-direction: column; height: 100vh;">
+  <div id="app" :class="{ dark: isDark }" style="display: flex; flex-direction: column; height: 100vh;">
     <VueHeader
       :menu-active="menuActive"
       :selected-table="selectedTable"
+      :is-dark="isDark"
       @menu-select="handleMenuSelect"
+      @upload-start="handleUploadStart"
       @upload-success="handleUploadSuccess"
       @upload-error="handleUploadError"
+      @toggle-theme="toggleTheme"
+      @toggle-lang="toggleLang"
+      @logo-click="backToOverview"
     />
 
-    <el-container style="flex: 1; overflow: hidden;">
+    <el-container
+      v-loading="uploading"
+      element-loading-text=" importing..."
+      element-loading-spinner="el-icon-loading"
+      style="flex: 1; overflow: hidden;"
+    >
       <Sidebar
         :selected-table="selectedTable"
+        :tables="tables"
         :columns="currentColumns"
         :total-rows="pagination.total"
         :collapsed="sidebarCollapsed"
         @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed"
+        @select-table="enterTable"
       />
 
       <el-main class="vue-main">
         <TableOverview
-          v-if="!selectedTable"
+          v-show="!selectedTable"
           v-model="tableSearch"
           :tables="filteredTables"
           @enter-table="enterTable"
@@ -28,7 +40,7 @@
         />
 
         <TableDetail
-          v-if="selectedTable"
+          v-show="selectedTable"
           :table-name="selectedTable"
           :columns="currentColumns"
           :configs="configs"
@@ -90,7 +102,9 @@ export default {
       editDialogVisible: false,
       isNewRow: false,
       editForm: {},
-      sort: { prop: null, order: null }
+      sort: { prop: null, order: null },
+      isDark: localStorage.getItem('theme') === 'dark',
+      uploading: false
     }
   },
   computed: {
@@ -104,7 +118,9 @@ export default {
     }
   },
   mounted() {
+    this.applyTheme()
     this.loadTables()
+    document.title = this.$t('app.title')
     this.$nextTick(() => this.setupFooterObserver())
   },
   beforeDestroy() {
@@ -119,6 +135,27 @@ export default {
         { root: null, threshold: 0 }
       )
       this.footerObserver.observe(sentinel)
+    },
+
+    applyTheme() {
+      if (this.isDark) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    },
+
+    toggleTheme() {
+      this.isDark = !this.isDark
+      localStorage.setItem('theme', this.isDark ? 'dark' : 'light')
+      this.applyTheme()
+    },
+
+    toggleLang() {
+      const newLocale = this.$i18n.locale === 'zh' ? 'en' : 'zh'
+      this.$i18n.locale = newLocale
+      localStorage.setItem('locale', newLocale)
+      document.title = this.$t('app.title')
     },
 
     handleMenuSelect(index) {
@@ -144,7 +181,7 @@ export default {
         const res = await axios.get('/api/tables')
         this.tables = res.data.tables
       } catch (e) {
-        this.$message.error('加载表名失败: ' + e.message)
+        this.$message.error(this.$t('msg.load_tables_fail', { msg: e.message }))
       }
     },
 
@@ -197,19 +234,24 @@ export default {
           }
         }
       } catch (e) {
-        this.$message.error('加载配置失败: ' + e.message)
+        this.$message.error(this.$t('msg.load_configs_fail', { msg: e.message }))
       } finally {
         this.loading = false
       }
     },
 
+    handleUploadStart() {
+      this.uploading = true
+    },
     handleUploadSuccess(response) {
+      this.uploading = false
       this.$message.success(response.message)
       this.loadTables()
       if (this.selectedTable) this.loadConfigs()
     },
     handleUploadError(error) {
-      const msg = error?.message || (typeof error === 'string' ? error : '上传失败，请检查文件格式')
+      this.uploading = false
+      const msg = error?.message || (typeof error === 'string' ? error : null) || this.$t('msg.upload_fail')
       this.$message.error(msg)
     },
 
@@ -225,20 +267,21 @@ export default {
 
     async batchDelete() {
       if (!this.selectedRows.length) return
+      const count = this.selectedRows.length
       this.$confirm(
-        `确定要删除选中的 ${this.selectedRows.length} 条配置吗? 删除后不可恢复。`,
-        '批量删除',
-        { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
+        this.$t('confirm.batch_delete_content', { count }),
+        this.$t('confirm.batch_delete_title'),
+        { confirmButtonText: this.$t('confirm.btn_confirm'), cancelButtonText: this.$t('confirm.btn_cancel'), type: 'warning' }
       ).then(async () => {
         try {
           const ids = this.selectedRows.map(r => r.id)
           await axios.post('/api/configs/batch-delete', { table_name: this.selectedTable, ids })
-          this.$message.success(`成功删除 ${ids.length} 条配置`)
+          this.$message.success(this.$t('msg.batch_delete_success', { count: ids.length }))
           this.selectedRows = []
           this.loadConfigs()
           this.loadTables()
         } catch (e) {
-          this.$message.error('批量删除失败: ' + (e.response?.data?.error || e.message))
+          this.$message.error(this.$t('msg.batch_delete_fail', { msg: e.response?.data?.error || e.message }))
         }
       }).catch(() => {})
     },
@@ -255,9 +298,9 @@ export default {
         a.download = res.data.filename
         a.click()
         window.URL.revokeObjectURL(url)
-        this.$message.success(`成功导出 ${ids.length} 条配置`)
+        this.$message.success(this.$t('msg.export_success', { count: ids.length }))
       } catch (e) {
-        this.$message.error('导出失败: ' + (e.response?.data?.error || e.message))
+        this.$message.error(this.$t('msg.export_fail', { msg: e.response?.data?.error || e.message }))
       }
     },
 
@@ -280,73 +323,34 @@ export default {
         this.currentColumns.forEach(col => { configData[col] = this.editForm[col] || '' })
         if (this.isNewRow) {
           await axios.post('/api/configs', { table_name: this.selectedTable, config_data: configData })
-          this.$message.success('新增成功')
+          this.$message.success(this.$t('msg.add_success'))
         } else {
           await axios.put(`/api/configs/${this.editForm._id}`, { table_name: this.selectedTable, config_data: configData })
-          this.$message.success('保存成功')
+          this.$message.success(this.$t('msg.save_success'))
         }
         this.editDialogVisible = false
         this.loadConfigs()
         this.loadTables()
       } catch (e) {
-        this.$message.error('保存失败: ' + e.message)
+        this.$message.error(this.$t('msg.save_fail', { msg: e.message }))
       }
     },
 
     handleDelete(row) {
-      this.$confirm('确定要删除这条配置吗? 删除后不可恢复。', '确认删除', {
-        confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning'
-      }).then(async () => {
+      this.$confirm(
+        this.$t('confirm.delete_content'),
+        this.$t('confirm.delete_title'),
+        { confirmButtonText: this.$t('confirm.btn_confirm'), cancelButtonText: this.$t('confirm.btn_cancel'), type: 'warning' }
+      ).then(async () => {
         try {
           await axios.delete(`/api/configs/${row.id}`, { params: { table_name: this.selectedTable } })
-          this.$message.success('删除成功')
+          this.$message.success(this.$t('msg.delete_success'))
           this.loadConfigs()
         } catch (e) {
-          this.$message.error('删除失败: ' + e.message)
+          this.$message.error(this.$t('msg.delete_fail', { msg: e.message }))
         }
       }).catch(() => {})
     }
   }
 }
 </script>
-
-<style>
-/* ====== 全局样式（unscoped） ====== */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html, body {
-  height: 100%; margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: #f5f7fa; color: #213547;
-  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-}
-#app {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-}
-
-/* 通用内容区 */
-.vue-main { background: #f5f7fa; padding: 24px 32px; overflow-y: auto; }
-.footer-sentinel { height: 1px; }
-
-/* ====== Element UI 主题微调 ====== */
-.el-table { border-radius: 6px; }
-.el-table th.el-table__cell {
-  background: #f8f9fc !important; color: #555; font-weight: 600; font-size: 13px;
-}
-.el-table .cell { line-height: 1.5; }
-.el-button--success { background: #41b883; border-color: #41b883; }
-.el-button--success:hover { background: #3aa876; border-color: #3aa876; }
-.el-button--primary { background: #3eaf7c; border-color: #3eaf7c; }
-.el-button--primary:hover { background: #349b6b; border-color: #349b6b; }
-.el-button--primary.is-plain { color: #3eaf7c; background: #f0f9f4; border-color: #b8e6d0; }
-.el-button--primary.is-plain:hover { color: #2c9c6f; background: #d0f0e0; border-color: #8dd4b4; }
-.el-button--warning.is-plain { color: #e6a23c; background: #fdf6ec; border-color: #f5dab1; }
-.el-pagination.is-background .el-pager li:not(.disabled).active { background: #41b883; }
-.el-pagination.is-background .el-pager li:not(.disabled):hover { color: #41b883; }
-.el-tag--success.el-tag--dark { background: #41b883; border-color: #41b883; }
-.el-link.el-link--primary { color: #3eaf7c; }
-.el-input__inner:focus { border-color: #41b883; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #aaa; }
-</style>

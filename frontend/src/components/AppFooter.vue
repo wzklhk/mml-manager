@@ -32,10 +32,11 @@ export default {
 <style scoped>
 .vue-footer {
   flex-shrink: 0;
-  background: #1a1a2e;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  background: var(--footer-bg);
+  border-top: 1px solid var(--header-border);
   padding: 14px 24px;
   text-align: center;
+  transition: background 0.3s;
 }
 .footer-content {
   font-size: 12.5px; color: #888;
@@ -46,4 +47,5 @@ export default {
 .footer-copyright { color: #888; }
 .copyright-link { color: #aaa; text-decoration: none; transition: color 0.15s; }
 .copyright-link:hover { color: #41b883; }
+
 </style>

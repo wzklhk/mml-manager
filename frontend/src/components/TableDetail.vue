@@ -6,9 +6,9 @@
         {{ tableName }}
       </h2>
       <p class="page-desc">
-        {{ columns.length }} 列 ·
-        <template v-for="(col, idx) in columns">
-          <code class="inline-code" :key="col">{{ col }}<span v-if="idx < columns.length - 1">, </span></code>
+        {{ columns.length }} {{ $t('detail.columns') }} &middot;
+        <template v-for="(col, idx) in columns" :key="col">
+          <code class="inline-code">{{ col }}<span v-if="idx < columns.length - 1">, </span></code>
         </template>
       </p>
     </div>
@@ -17,21 +17,21 @@
       <el-row type="flex" align="middle">
         <el-col :span="12">
           <span v-if="selectedRows.length > 0" class="batch-info">
-            已选择 <strong>{{ selectedRows.length }}</strong> 行
+            {{ $t('detail.selected_rows', { count: selectedRows.length }) }}
           </span>
           <span v-else class="batch-info" style="color: #999;">
-            <i class="el-icon-info"></i> 勾选左侧复选框进行批处理操作
+            <i class="el-icon-info"></i> {{ $t('detail.batch_hint') }}
           </span>
         </el-col>
         <el-col :span="12" style="text-align: right;">
           <el-button size="small" type="danger" :disabled="selectedRows.length === 0" @click="$emit('batch-delete')">
-            <i class="el-icon-delete"></i> 批量删除
+            <i class="el-icon-delete"></i> {{ $t('detail.batch_delete') }}
           </el-button>
           <el-button size="small" type="primary" @click="$emit('add-row')">
-            <i class="el-icon-plus"></i> 批量添加
+            <i class="el-icon-plus"></i> {{ $t('detail.batch_add') }}
           </el-button>
           <el-button size="small" class="vue-btn-outline-green" :disabled="selectedRows.length === 0" @click="$emit('batch-export')">
-            <i class="el-icon-download"></i> 批量导出
+            <i class="el-icon-download"></i> {{ $t('detail.batch_export') }}
           </el-button>
         </el-col>
       </el-row>
@@ -53,14 +53,14 @@
           :prop="'config_data.' + col" :label="col"
           sortable="custom" min-width="130"
         >
-          <template slot-scope="scope">
+          <template #default="scope">
             <span class="cell-value">{{ scope.row.config_data[col] || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
-          <template slot-scope="scope">
-            <el-button size="mini" type="warning" plain @click="$emit('edit-row', scope.row)">编辑</el-button>
-            <el-button size="mini" type="danger" plain @click="$emit('delete-row', scope.row)">删除</el-button>
+        <el-table-column :label="$t('detail.actions')" width="150" fixed="right">
+          <template #default="scope">
+            <el-button size="small" type="warning" plain @click="$emit('edit-row', scope.row)">{{ $t('detail.edit') }}</el-button>
+            <el-button size="small" type="danger" plain @click="$emit('delete-row', scope.row)">{{ $t('detail.delete') }}</el-button>
           </template>
         </el-table-column>
       </el-table>

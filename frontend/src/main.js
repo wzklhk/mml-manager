@@ -1,11 +1,13 @@
-import Vue from 'vue'
-import ElementUI from 'element-ui'
-import 'element-ui/lib/theme-chalk/index.css'
+import { createApp } from 'vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import en from 'element-plus/dist/locale/en.mjs'
 import App from './App.vue'
+import i18n from './i18n'
+import './styles/theme.css'
 
-Vue.use(ElementUI)
-Vue.config.productionTip = false
-
-new Vue({
-  render: h => h(App),
-}).$mount('#app')
+const app = createApp(App)
+app.use(ElementPlus, { locale: i18n.global.locale === 'zh' ? zhCn : en })
+app.use(i18n)
+app.mount('#app')
