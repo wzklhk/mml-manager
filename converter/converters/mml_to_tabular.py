@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """MML → Tabular (Excel/CSV) 转换核心模块"""
+
 import os
 from typing import Dict, List, Optional
 
@@ -13,9 +14,9 @@ from utils.table import MmlConfig
 def convert_numeric_strings(value):
     """尝试将数字字符串转为数值类型"""
     if value is None:
-        return ''
+        return ""
     try:
-        if '.' in str(value):
+        if "." in str(value):
             return float(value)
         return int(value)
     except (ValueError, TypeError):
@@ -27,7 +28,7 @@ def convert(
     output_base: str = None,
     generate_excel: bool = True,
     generate_csv: bool = False,
-    encoding: str = 'utf-8',
+    encoding: str = "utf-8",
 ) -> Dict:
     """转换 MML 文件为 Excel/CSV。
 
@@ -45,7 +46,7 @@ def convert(
 
     dataset = read_mml_file(input_file, encoding=encoding)
     if dataset.total_count == 0:
-        raise ValueError('未找到有效的MML命令')
+        raise ValueError("未找到有效的MML命令")
 
     # 排序
     for table in dataset.tables:
@@ -59,16 +60,16 @@ def convert(
     else:
         base = output_base
 
-    result = {'config_count': dataset.total_count, 'table_count': len(dataset.tables)}
+    result = {"config_count": dataset.total_count, "table_count": len(dataset.tables)}
 
     if generate_excel:
         excel_path = f"{base}.xlsx"
         write_excel(excel_path, dataset)
-        result['output_excel'] = excel_path
+        result["output_excel"] = excel_path
 
     if generate_csv:
         csv_dir = f"{base}_csv"
         write_csvs(csv_dir, dataset)
-        result['output_csv_dir'] = csv_dir
+        result["output_csv_dir"] = csv_dir
 
     return result

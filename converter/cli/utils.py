@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """CLI 工具包 — 共享工具函数"""
+
 import os
 import sys
 import argparse
@@ -34,5 +35,5 @@ def resolve_output_path(
 
 def add_common_args(parser: argparse.ArgumentParser):
     """添加通用的 -o/--output 和 --encoding 参数"""
-    parser.add_argument('-o', '--output', help='输出文件路径')
-    parser.add_argument('--encoding', default='utf-8', help='文件编码（默认 utf-8）')
+    parser.add_argument("-o", "--output", help="输出文件路径")
+    parser.add_argument("--encoding", default="utf-8", help="文件编码（默认 utf-8）")

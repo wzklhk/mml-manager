@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """XLS → MML 转换核心模块"""
+
 import os
 from typing import Dict, Optional
 
@@ -27,10 +28,10 @@ def convert_xls_to_mml(input_file: str, output_file: str = None) -> Dict:
         if not rows:
             continue
 
-        headers = [str(h).strip() if h else '' for h in rows[0]]
+        headers = [str(h).strip() if h else "" for h in rows[0]]
 
         for row in rows[1:]:
-            row = [str(c).strip() if c else '' for c in row]
+            row = [str(c).strip() if c else "" for c in row]
             if not any(row):
                 continue
 
@@ -40,7 +41,7 @@ def convert_xls_to_mml(input_file: str, output_file: str = None) -> Dict:
             if len(parts) < 2:
                 continue
             cmd_type = parts[-1]  # SET/ADD
-            table_name = ' '.join(parts[:-1])
+            table_name = " ".join(parts[:-1])
 
             values = {}
             for i in range(1, min(len(headers), len(row))):
@@ -48,18 +49,18 @@ def convert_xls_to_mml(input_file: str, output_file: str = None) -> Dict:
                     values[headers[i]] = format_mml_value_simple(row[i])
 
             if values:
-                mml_parts = [f'{k}={v}' for k, v in values.items()]
+                mml_parts = [f"{k}={v}" for k, v in values.items()]
                 mml_lines.append(f"{cmd_type} {table_name}:{','.join(mml_parts)};\n")
                 total += 1
 
     wb.close()
 
     if output_file is None:
-        output_file = os.path.splitext(input_file)[0] + '.mml'
+        output_file = os.path.splitext(input_file)[0] + ".mml"
 
     header = f"-- 由 xls2mml.py 从 {os.path.basename(input_file)} 生成\n\n"
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write(header)
         f.writelines(mml_lines)
 
-    return {'total': total, 'output_path': output_file}
+    return {"total": total, "output_path": output_file}

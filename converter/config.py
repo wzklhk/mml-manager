@@ -10,22 +10,23 @@
 
 所有相对路径解析基于配置文件所在目录。
 """
+
 import os
 import yaml
 from typing import Any, Dict
 
 # ---- 默认配置 ----
 DEFAULTS: Dict[str, Any] = {
-    'server': {
-        'host': '0.0.0.0',
-        'port': 5000,
-        'debug': True,
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5000,
+        "debug": True,
     },
-    'database': {
-        'path': 'mml_config.db',
+    "database": {
+        "path": "mml_config.db",
     },
-    'logging': {
-        'level': 'INFO',
+    "logging": {
+        "level": "INFO",
     },
 }
 
@@ -35,17 +36,17 @@ _SETTINGS: Dict[str, Any] | None = None
 def _find_config() -> str | None:
     """按优先级查找配置文件路径"""
     # 1. 环境变量指定
-    env_path = os.environ.get('MML_CONFIG_PATH')
+    env_path = os.environ.get("MML_CONFIG_PATH")
     if env_path and os.path.isfile(env_path):
         return env_path
 
     # 2. 当前目录（与 app.py 同级）
-    local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.yaml')
+    local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
     if os.path.isfile(local_path):
         return local_path
 
     # 3. 用户家目录 ~/.mml-manager/config.yaml
-    home_path = os.path.expanduser('~/.mml-manager/config.yaml')
+    home_path = os.path.expanduser("~/.mml-manager/config.yaml")
     if os.path.isfile(home_path):
         return home_path
 
@@ -83,7 +84,7 @@ def load_config() -> Dict[str, Any]:
     config_dir = os.path.dirname(config_path) if config_path else os.getcwd()
 
     if config_path:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             # 支持无 yaml 依赖时的降级（但实际 yaml 是必需依赖）
             try:
                 overrides = yaml.safe_load(f) or {}
@@ -94,11 +95,11 @@ def load_config() -> Dict[str, Any]:
                 print(f"[WARN] 配置文件解析失败: {e}，使用默认配置")
 
     # 解析数据库路径
-    db_path = settings['database']['path']
-    settings['database']['path'] = _resolve_path(db_path, config_dir)
+    db_path = settings["database"]["path"]
+    settings["database"]["path"] = _resolve_path(db_path, config_dir)
 
     # 确保数据库目录存在
-    db_dir = os.path.dirname(settings['database']['path'])
+    db_dir = os.path.dirname(settings["database"]["path"])
     if db_dir:
         os.makedirs(db_dir, exist_ok=True)
 

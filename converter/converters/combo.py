@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Combo 包分析模块 — 解析 PCCSUB 等组合包配置"""
+
 import re
 import csv
 from collections import defaultdict
@@ -17,14 +18,11 @@ def parse_pccsub_line(line: str) -> Optional[Dict]:
         {'pkg_name': 'PKG_MCC_01', 'params': {'MCC': '460', 'MNC': '00'}}
     """
     line = line.strip()
-    if not line or line.startswith('--'):
+    if not line or line.startswith("--"):
         return None
 
     # PCCSUB:"NAME",KEY="VAL",KEY="VAL";
-    match = re.match(
-        r'(PCCSUB|COMBO|PKG):\s*"([^"]+)"\s*,?\s*(.*?);?\s*$',
-        line, re.IGNORECASE
-    )
+    match = re.match(r'(PCCSUB|COMBO|PKG):\s*"([^"]+)"\s*,?\s*(.*?);?\s*$', line, re.IGNORECASE)
     if not match:
         return None
 
@@ -36,7 +34,7 @@ def parse_pccsub_line(line: str) -> Optional[Dict]:
     for m in re.finditer(pattern, params_str):
         params[m.group(1)] = m.group(2)
 
-    return {'pkg_name': pkg_name, 'params': params}
+    return {"pkg_name": pkg_name, "params": params}
 
 
 def analyze_packages(input_file: str, output_csv: str = None) -> Dict:
@@ -52,36 +50,36 @@ def analyze_packages(input_file: str, output_csv: str = None) -> Dict:
     packages = []
     all_params = set()
 
-    with open(input_file, 'r', encoding='utf-8') as f:
+    with open(input_file, "r", encoding="utf-8") as f:
         for line in f:
             pkg = parse_pccsub_line(line)
             if pkg:
                 packages.append(pkg)
-                all_params.update(pkg['params'].keys())
+                all_params.update(pkg["params"].keys())
 
     result = {
-        'total_packages': len(packages),
-        'packages': [],
-        'columns': sorted(all_params),
+        "total_packages": len(packages),
+        "packages": [],
+        "columns": sorted(all_params),
     }
 
     for pkg in packages:
         entry = {
-            'pkg_name': pkg['pkg_name'],
-            'params': pkg['params'],
-            'param_count': len(pkg['params']),
+            "pkg_name": pkg["pkg_name"],
+            "params": pkg["params"],
+            "param_count": len(pkg["params"]),
         }
-        result['packages'].append(entry)
+        result["packages"].append(entry)
 
     # 写入 CSV
     if output_csv and packages:
-        columns = ['pkg_name'] + sorted(all_params)
-        with open(output_csv, 'w', newline='', encoding='utf-8-sig') as f:
+        columns = ["pkg_name"] + sorted(all_params)
+        with open(output_csv, "w", newline="", encoding="utf-8-sig") as f:
             writer = csv.DictWriter(f, fieldnames=columns)
             writer.writeheader()
             for pkg in packages:
-                row = {'pkg_name': pkg['pkg_name']}
-                row.update(pkg['params'])
+                row = {"pkg_name": pkg["pkg_name"]}
+                row.update(pkg["params"])
                 writer.writerow(row)
 
     return result

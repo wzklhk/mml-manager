@@ -5,6 +5,7 @@
 提供MML命令格式化和值转义的通用功能。
 所有与 MML 语法输出相关的函数集中于此。
 """
+
 import re
 from typing import Any
 
@@ -23,14 +24,14 @@ def quote_mml_value(value: Any) -> str:
         格式化后的MML值字符串
     """
     if value is None:
-        return ''
+        return ""
     if isinstance(value, float):
         if value == int(value):
             return str(int(value))
         return str(value)
     value = str(value).strip()
     if not value:
-        return ''
+        return ""
     if re.search(r'[\s,;"]', value):
         escaped = value.replace('"', '""')
         return f'"{escaped}"'
@@ -50,7 +51,7 @@ def format_mml_command(cmd_type: str, table: str, data: dict) -> str:
         格式化的MML命令字符串，如: SET LTE_CELL:ID=1,NAME="Cell_A";
     """
     if not data:
-        return ''
+        return ""
     kv_pairs = []
     for key, val in data.items():
         kv_pairs.append(f"{key}={quote_mml_value(val)}")
@@ -75,7 +76,7 @@ def format_mml_value_simple(value: Any) -> str:
     val_str = str(value).strip()
     if not val_str:
         return ""
-    if any(c in val_str for c in [',', ' ', '=', '"', "'"]):
+    if any(c in val_str for c in [",", " ", "=", '"', "'"]):
         val_str = val_str.replace('"', '\\"')
         return f'"{val_str}"'
     return val_str

@@ -4,16 +4,17 @@
 
 提供表名规范化、MML命令数据模型等通用功能。
 """
+
 import re
 from typing import Dict, List, Optional, Any
 
-
 # --- 表名处理 ---
+
 
 def sanitize_table_name(name: str) -> str:
     """
     将任意字符串转为合法的MML表名。
-    
+
     - 非字母数字下划线字符替换为下划线
     - 数字开头的表名加 T_ 前缀
     - 空字符串返回 'TABLE'
@@ -25,16 +26,17 @@ def sanitize_table_name(name: str) -> str:
         合法的MML表名
     """
     if not name:
-        return 'TABLE'
-    table = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+        return "TABLE"
+    table = re.sub(r"[^a-zA-Z0-9_]", "_", name)
     if not table:
-        return 'TABLE'
+        return "TABLE"
     if table[0].isdigit():
         table = f"T_{table}"
     return table
 
 
 # --- MML配置数据模型 ---
+
 
 class MmlConfig:
     """
@@ -46,26 +48,26 @@ class MmlConfig:
         values: 键值对字典 {字段名: 字段值}
     """
 
-    def __init__(self, cmd_type: str = 'SET', table: str = '', values: Optional[Dict[str, str]] = None):
+    def __init__(self, cmd_type: str = "SET", table: str = "", values: Optional[Dict[str, str]] = None):
         self.cmd_type = cmd_type.upper()
         self.table = table
         self.values = values or {}
 
     def to_dict(self) -> Dict[str, Any]:
-        """转为基础字典格式（兼容旧代码）"""
+        """转为基础字典格式"""
         return {
-            'cmd_type': self.cmd_type,
-            'table': self.table,
-            'values': dict(self.values),
+            "cmd_type": self.cmd_type,
+            "table": self.table,
+            "values": dict(self.values),
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> 'MmlConfig':
+    def from_dict(cls, d: Dict[str, Any]) -> "MmlConfig":
         """从基础字典创建"""
         return cls(
-            cmd_type=d.get('cmd_type', 'SET'),
-            table=d.get('table', ''),
-            values=dict(d.get('values', {})),
+            cmd_type=d.get("cmd_type", "SET"),
+            table=d.get("table", ""),
+            values=dict(d.get("values", {})),
         )
 
     def __repr__(self) -> str:
@@ -73,6 +75,7 @@ class MmlConfig:
 
 
 # --- 分组数据 ---
+
 
 class TableGroup:
     """
@@ -84,7 +87,7 @@ class TableGroup:
         columns: 所有出现的字段名集合
     """
 
-    def __init__(self, table_name: str = ''):
+    def __init__(self, table_name: str = ""):
         self.table_name = table_name
         self.configs: List[MmlConfig] = []
         self.columns: set = set()
@@ -94,7 +97,7 @@ class TableGroup:
         self.configs.append(config)
         self.columns.update(config.values.keys())
 
-    def merge(self, other: 'TableGroup'):
+    def merge(self, other: "TableGroup"):
         """合并另一个同表分组的数据"""
         for c in other.configs:
             self.add(c)

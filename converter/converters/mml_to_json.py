@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """MML → JSON 转换核心模块"""
+
 import json
 import os
 from datetime import datetime
@@ -11,8 +12,9 @@ from utils.sort import sort_records
 
 
 def convert_file_to_json(
-    input_file: str, output_file: str,
-    encoding: str = 'gbk',
+    input_file: str,
+    output_file: str,
+    encoding: str = "gbk",
 ) -> Dict:
     """转换 MML 文件为 JSON。
 
@@ -22,22 +24,19 @@ def convert_file_to_json(
     total = sum(len(v) for v in configs_by_table.values())
 
     result = {
-        'meta': {
-            'source': os.path.basename(input_file),
-            'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'total_configs': total,
+        "meta": {
+            "source": os.path.basename(input_file),
+            "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "total_configs": total,
         },
-        'configs': {},
+        "configs": {},
     }
 
     for table_name in sorted(configs_by_table.keys()):
         configs = configs_by_table[table_name]
-        result['configs'][table_name] = [
-            {'cmd_type': c['cmd_type'], 'values': c['values']}
-            for c in configs
-        ]
+        result["configs"][table_name] = [{"cmd_type": c["cmd_type"], "values": c["values"]} for c in configs]
 
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
-    return result['meta']
+    return result["meta"]

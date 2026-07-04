@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """MML → SQL 转换核心模块"""
+
 import os
 import re
 import sqlite3
@@ -10,29 +11,43 @@ from typing import Dict, List, Tuple, Optional
 #  解析
 # ============================================================
 
+
 def parse_key_value_pairs(text: str) -> Dict[str, Optional[str]]:
-    """解析键值对，如 ID=201,NAME="ToJSZUSPP01_SCTP_SYN_01",LOCPORT=5001"""
+    """解析键值对，如 ID=201,NAME="ToJSZUSPP01_SCTP_SYN_01",LOCPORT=5001
+
+    支持 key 中包含空格，value 中包含空格或引号。
+    双引号值内支持 "" 转义。
+    """
     result = {}
-    pattern = r'(\w+)=(?:"([^"]*)"|([^,]*))'
+    # key 允许含空格（但不含 = 和 ,）
+    # value 支持双引号括起（内部 "" 转义）或普通字符（不含逗号）
+    pattern = r'([^=,]+)=(?:"((?:[^"]|"")*)"|([^,]*))'
     for key, quoted_val, unquoted_val in re.findall(pattern, text):
+        key = key.strip()
         value = quoted_val if quoted_val else unquoted_val
+        if quoted_val is not None:
+            value = value.replace('""', '"')
         value = value.strip()
         result[key] = value if value else None
     return result
 
 
 def parse_any_command(line: str) -> Optional[Dict]:
-    """解析任意 SET 或 ADD 命令"""
-    match = re.match(r'(SET|ADD)\s+(\w+):(.+)', line.strip())
+    """解析任意 SET 或 ADD 命令
+
+    支持 CMD 名、参数 key/value 中包含空格。
+    格式: SET CMD NAME:key1=val1,key2="val 2",key3=val3
+    """
+    match = re.match(r"(SET|ADD)\s+(.+?):(.+)", line.strip())
     if not match:
         return None
     cmd_type = match.group(1)
-    table_name = match.group(2)
+    table_name = match.group(2).strip()
     values_str = match.group(3)
-    if values_str.endswith(';'):
+    if values_str.endswith(";"):
         values_str = values_str[:-1]
     values = parse_key_value_pairs(values_str)
-    return {'table': table_name, 'values': values, 'cmd_type': cmd_type}
+    return {"table": table_name, "values": values, "cmd_type": cmd_type}
 
 
 # ============================================================
@@ -40,20 +55,41 @@ def parse_any_command(line: str) -> Optional[Dict]:
 # ============================================================
 
 _INTEGER_COLUMNS = {
-    'LOCPORT', 'REMPORT', 'INSTRM', 'OUTSTRM',
-    'MAXRTRY', 'MAXRTO', 'MINRTO', 'INITRTO',
-    'QOSVALUE', 'HB', 'SCTPMAXRTRYNUM', 'DELAYACK',
-    'PMTU', 'CB', 'MINCWND', 'PLTIMER', 'MPPLTHRD',
-    'OFCID', 'MPDTHRD', 'DTLSCERTID', 'CDBTENANTID',
-    'STATASSOFULLTHR', 'REBALANCECPUTHRESH', 'REBALANCEINTERVAL',
-    'REBALANCEFORBIDTIME', 'SCRECOVERYTIMERLEN', 'SCTPDYNAINITLIMIT',
-    'SCTPDYNALARMLIMIT', 'SCTPTXNOTIFYTHRESH',
+    "LOCPORT",
+    "REMPORT",
+    "INSTRM",
+    "OUTSTRM",
+    "MAXRTRY",
+    "MAXRTO",
+    "MINRTO",
+    "INITRTO",
+    "QOSVALUE",
+    "HB",
+    "SCTPMAXRTRYNUM",
+    "DELAYACK",
+    "PMTU",
+    "CB",
+    "MINCWND",
+    "PLTIMER",
+    "MPPLTHRD",
+    "OFCID",
+    "MPDTHRD",
+    "DTLSCERTID",
+    "CDBTENANTID",
+    "STATASSOFULLTHR",
+    "REBALANCECPUTHRESH",
+    "REBALANCEINTERVAL",
+    "REBALANCEFORBIDTIME",
+    "SCRECOVERYTIMERLEN",
+    "SCTPDYNAINITLIMIT",
+    "SCTPDYNALARMLIMIT",
+    "SCTPTXNOTIFYTHRESH",
 }
 
 
 def infer_column_type(column_name: str) -> str:
     """根据列名推断 SQLite 数据类型"""
-    if column_name.endswith('ID') or column_name in _INTEGER_COLUMNS:
+    if column_name.endswith("ID") or column_name in _INTEGER_COLUMNS:
         return "INTEGER"
     return "TEXT"
 
@@ -67,7 +103,8 @@ def generate_create_table_sql(table_name: str, columns: List[str]) -> str:
 
 
 def generate_insert_sql(
-    table_name: str, data: Dict[str, str],
+    table_name: str,
+    data: Dict[str, str],
     for_sql_file: bool = False,
 ) -> Tuple[str, List]:
     """生成 INSERT 语句。
@@ -83,14 +120,14 @@ def generate_insert_sql(
     columns = list(data.keys())
     values = list(data.values())
     cols_quoted = [f'"{c}"' for c in columns]
-    cols_str = ', '.join(cols_quoted)
+    cols_str = ", ".join(cols_quoted)
 
     if for_sql_file:
         quote = chr(39)
         vals = []
         for v in values:
             if v is None:
-                vals.append('NULL')
+                vals.append("NULL")
             elif isinstance(v, (int, float)):
                 vals.append(str(v))
             else:
@@ -99,7 +136,7 @@ def generate_insert_sql(
         sql = f"INSERT INTO {table_name} ({cols_str}) VALUES ({', '.join(vals)});"
         return sql, []
     else:
-        placeholders = ', '.join(['?'] * len(columns))
+        placeholders = ", ".join(["?"] * len(columns))
         sql = f"INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders});"
         return sql, values
 
@@ -108,13 +145,15 @@ def generate_insert_sql(
 #  排序
 # ============================================================
 
+
 def sort_configs_by_values(configs: List[Dict]) -> List[Dict]:
     """按 values 字段对配置排序，优先 ID 字段"""
+
     def _try_parse_int(v):
         if v is None:
             return None
         s = str(v).strip()
-        if s.isdigit() or (s.startswith('-') and s[1:].isdigit()):
+        if s.isdigit() or (s.startswith("-") and s[1:].isdigit()):
             try:
                 return int(s)
             except ValueError:
@@ -122,16 +161,24 @@ def sort_configs_by_values(configs: List[Dict]) -> List[Dict]:
         return None
 
     def _sort_key(config):
-        vals = config.get('values', {})
+        vals = config.get("values", {})
         if not vals:
-            return (2, 1, '')
-        for field in ['ID', 'INDEX', 'SEQ', 'SEQUENCE']:
+            return (3, 1, "")
+        # 1. 精确匹配 ID / INDEX / SEQ / SEQUENCE
+        for field in ["ID", "INDEX", "SEQ", "SEQUENCE"]:
             if field in vals:
                 n = _try_parse_int(vals[field])
                 return (0, 0, n) if n is not None else (0, 1, str(vals[field]))
+        # 2. 匹配任何含 "ID" 的字段（如 PAKID, SUBRACK_ID 等），选最短的作为主键
+        id_keys = [k for k in vals if "ID" in k.upper()]
+        if id_keys:
+            key = min(id_keys, key=len)
+            n = _try_parse_int(vals[key])
+            return (1, 0, n) if n is not None else (1, 1, str(vals[key]))
+        # 3. 按第一个字段排序
         first_key = sorted(vals.keys())[0]
         n = _try_parse_int(vals[first_key])
-        return (1, 0, n) if n is not None else (1, 1, str(vals[first_key]))
+        return (2, 0, n) if n is not None else (2, 1, str(vals[first_key]))
 
     return sorted(configs, key=_sort_key)
 
@@ -140,24 +187,25 @@ def sort_configs_by_values(configs: List[Dict]) -> List[Dict]:
 #  文件 → SQL / 数据库
 # ============================================================
 
-def parse_mml_file(input_path: str, encoding: str = 'utf-8') -> Tuple[Dict, Dict]:
+
+def parse_mml_file(input_path: str, encoding: str = "utf-8") -> Tuple[Dict, Dict]:
     """解析 MML 文件，返回 (configs_by_table, all_columns)"""
     configs_by_table = {}
     all_columns = {}
 
-    with open(input_path, 'r', encoding=encoding) as f:
+    with open(input_path, "r", encoding=encoding) as f:
         for line in f:
             line = line.strip()
-            if not line or line.startswith('--'):
+            if not line or line.startswith("--"):
                 continue
             config = parse_any_command(line)
             if config:
-                tn = config['table']
+                tn = config["table"]
                 if tn not in configs_by_table:
                     configs_by_table[tn] = []
                     all_columns[tn] = set()
                 configs_by_table[tn].append(config)
-                all_columns[tn].update(config['values'].keys())
+                all_columns[tn].update(config["values"].keys())
 
     for tn in configs_by_table:
         configs_by_table[tn] = sort_configs_by_values(configs_by_table[tn])
@@ -166,7 +214,8 @@ def parse_mml_file(input_path: str, encoding: str = 'utf-8') -> Tuple[Dict, Dict
 
 
 def generate_sql_script(
-    configs_by_table: Dict, all_columns: Dict,
+    configs_by_table: Dict,
+    all_columns: Dict,
     include_comments: bool = True,
 ) -> List[str]:
     """生成 SQL 脚本语句列表"""
@@ -187,7 +236,7 @@ def generate_sql_script(
         statements.append("")
 
         for config in configs_by_table[table_name]:
-            sql, _ = generate_insert_sql(table_name, config['values'], for_sql_file=True)
+            sql, _ = generate_insert_sql(table_name, config["values"], for_sql_file=True)
             statements.append(sql)
         statements.append("")
 
@@ -195,7 +244,7 @@ def generate_sql_script(
         statements.append("-- 查询示例")
         for tn in sorted(all_columns.keys()):
             statements.append(f"-- SELECT COUNT(*) FROM {tn};")
-            if 'ID' in all_columns[tn]:
+            if "ID" in all_columns[tn]:
                 statements.append(f"-- SELECT * FROM {tn} WHERE ID > 100 LIMIT 10;")
             statements.append("")
 
@@ -203,8 +252,10 @@ def generate_sql_script(
 
 
 def convert_file_to_sql(
-    input_file: str, output_file: str,
-    db_name: str = None, encoding: str = 'utf-8',
+    input_file: str,
+    output_file: str,
+    db_name: str = None,
+    encoding: str = "utf-8",
 ) -> Tuple[int, int]:
     """转换 MML 文件为 SQL 脚本。
 
@@ -216,8 +267,8 @@ def convert_file_to_sql(
 
     statements = generate_sql_script(configs_by_table, all_columns)
 
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(statements))
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("\n".join(statements))
 
     if db_name:
         output_dir = os.path.dirname(output_file)
@@ -238,30 +289,30 @@ def create_database(db_path: str, configs_by_table: Dict, all_columns: Dict):
         conn.execute(generate_create_table_sql(table_name, columns))
 
         for config in configs_by_table[table_name]:
-            sql, values = generate_insert_sql(table_name, config['values'], for_sql_file=False)
+            sql, values = generate_insert_sql(table_name, config["values"], for_sql_file=False)
             conn.execute(sql, values)
 
     conn.commit()
     conn.close()
 
 
-def list_commands_in_file(file_path: str, encoding: str = 'utf-8') -> Dict:
+def list_commands_in_file(file_path: str, encoding: str = "utf-8") -> Dict:
     """列出文件中所有命令类型和列统计"""
     command_types = {}
     table_columns = {}
 
-    with open(file_path, 'r', encoding=encoding) as f:
+    with open(file_path, "r", encoding=encoding) as f:
         for line in f:
             line = line.strip()
-            if not line or line.startswith('--'):
+            if not line or line.startswith("--"):
                 continue
             config = parse_any_command(line)
             if config:
                 key = f"{config['cmd_type']} {config['table']}"
                 command_types[key] = command_types.get(key, 0) + 1
-                tn = config['table']
+                tn = config["table"]
                 if tn not in table_columns:
                     table_columns[tn] = set()
-                table_columns[tn].update(config['values'].keys())
+                table_columns[tn].update(config["values"].keys())
 
-    return {'command_types': command_types, 'table_columns': table_columns}
+    return {"command_types": command_types, "table_columns": table_columns}

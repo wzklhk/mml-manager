@@ -1,0 +1,7 @@
+﻿CELL_NAME,ID,REMARKS,RSRP_BIAS,TX_POWER
+Cell_01,1,,3,46
+Cell_02,2,,3,46
+Cell_03,3,,5,43
+Cell_04,4,,5,43
+Cell_05,5,,6,40
+Cell_06,6,"特殊值,含逗号",,40

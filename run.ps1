@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # MML 配置管理系统 - 一键构建 & 启动脚本 (PowerShell 版)
 #
 # 用法:
@@ -8,21 +8,21 @@
 #   .\run.ps1 dev         开发模式（后端 + 前端 dev server）
 # ============================================================
 
-$ROOT_DIR      = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ROOT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $CONVERTER_DIR = Join-Path $ROOT_DIR "converter"
-$FRONTEND_DIR  = Join-Path $ROOT_DIR "frontend"
-$VENV_DIR      = Join-Path $CONVERTER_DIR ".venv"
+$FRONTEND_DIR = Join-Path $ROOT_DIR "frontend"
+$VENV_DIR = Join-Path $CONVERTER_DIR ".venv"
 
 # ---- 颜色 ----
-$CYAN   = "Cyan"
-$GREEN  = "Green"
+$CYAN = "Cyan"
+$GREEN = "Green"
 $YELLOW = "Yellow"
-$RED    = "Red"
+$RED = "Red"
 
-function info  { Write-Host "[INFO]  $args" -ForegroundColor $CYAN }
-function ok    { Write-Host "[OK]    $args" -ForegroundColor $GREEN }
-function warn  { Write-Host "[WARN]  $args" -ForegroundColor $YELLOW }
-function err   { Write-Host "[ERR]   $args" -ForegroundColor $RED }
+function info { Write-Host "[INFO]  $args" -ForegroundColor $CYAN }
+function ok { Write-Host "[OK]    $args" -ForegroundColor $GREEN }
+function warn { Write-Host "[WARN]  $args" -ForegroundColor $YELLOW }
+function err { Write-Host "[ERR]   $args" -ForegroundColor $RED }
 
 # ---- 依赖检查 ----
 function check_deps {
@@ -46,8 +46,8 @@ function check_deps {
     if ($missing) { exit 1 }
 
     $nodeV = node -v
-    $npmV  = npm -v
-    $pyV   = python -V 2>&1
+    $npmV = npm -v
+    $pyV = python -V 2>&1
     ok "Dependency check passed (node=$nodeV, npm=$npmV, python=$pyV)"
 }
 
