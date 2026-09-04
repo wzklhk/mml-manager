@@ -5,7 +5,7 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [vue()],
 
-  // 生产环境：前端静态文件由 Flask 在 /static 路径下提供
+  // 生产环境：前端静态文件由 FastAPI 在 /static 路径下提供
   base: '/static/',
 
   build: {

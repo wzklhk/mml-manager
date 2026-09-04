@@ -1,6 +1,6 @@
 # MML Manager 后端
 
-该目录包含 MML Manager 的 Flask API、SQLite 数据访问、格式转换器和 CLI。
+该目录包含 MML Manager 的 FastAPI、SQLite 数据访问、格式转换器和 CLI。
 
 ## 本地启动
 

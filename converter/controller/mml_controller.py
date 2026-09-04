@@ -1,264 +1,209 @@
 # -*- coding: utf-8 -*-
-"""
-控制层 (Controller)
-Flask 路由定义，处理 HTTP 请求/响应。
-"""
+"""FastAPI 路由定义与 HTTP 请求/响应处理。"""
 
 import os
+import tempfile
 from datetime import datetime
-from flask import Blueprint, request, jsonify
-from werkzeug.utils import secure_filename
+from typing import Any
 
-from service import mml_service
-from dao import mml_dao
+from fastapi import APIRouter, File, Query, UploadFile
+from fastapi.responses import JSONResponse
+
 from config import get_settings
+from service import mml_service
 
-# Blueprint 注册到 /api 前缀
-api = Blueprint("api", __name__, url_prefix="/api")
-
-# 数据库目录（用于存放临时文件）
+api = APIRouter(prefix="/api")
 DB_DIR = os.path.dirname(get_settings()["database"]["path"])
 MAX_COMPARE_FILE_SIZE = 20 * 1024 * 1024
 
 
-def _is_mml_file(file) -> bool:
+def _error(message: str, status_code: int) -> JSONResponse:
+    return JSONResponse({"error": message}, status_code=status_code)
+
+
+def _is_mml_file(file: UploadFile | None) -> bool:
     return bool(file and file.filename and file.filename.lower().endswith(".mml"))
 
 
-@api.route("/health", methods=["GET"])
-def health_check():
-    """健康检查"""
-    return jsonify({"status": "ok", "timestamp": datetime.now().isoformat()})
-
-
-@api.route("/import-mml", methods=["POST"])
-def import_mml():
-    """导入 MML 文件"""
-    if "file" not in request.files:
-        return jsonify({"error": "未上传文件"}), 400
-
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "文件名为空"}), 400
-    if not _is_mml_file(file):
-        return jsonify({"error": "只支持.mml格式文件"}), 400
-
-    temp_path = os.path.join(DB_DIR, f"temp_{datetime.now().timestamp()}.mml")
-
+async def _save_upload(file: UploadFile, prefix: str, max_size: int | None = None) -> str:
+    """流式保存上传文件，并可在写入过程中执行大小限制。"""
+    suffix = os.path.splitext(file.filename or "upload.mml")[1]
+    handle = tempfile.NamedTemporaryFile(
+        mode="wb", prefix=prefix, suffix=suffix, dir=DB_DIR or None, delete=False
+    )
+    size = 0
     try:
-        file.save(temp_path)
-        result = mml_service.import_mml_file(temp_path)
-
-        if "error" in result:
-            return jsonify(result), 400
-
-        return jsonify(result)
-
-    except Exception as e:
-        return jsonify({"error": f"导入失败: {str(e)}"}), 500
-
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if max_size is not None and size > max_size:
+                raise ValueError("单个文件不能超过 20 MB")
+            handle.write(chunk)
+        return handle.name
+    except Exception:
+        handle.close()
+        if os.path.exists(handle.name):
+            os.remove(handle.name)
+        raise
     finally:
-        if os.path.exists(temp_path):
+        handle.close()
+        await file.close()
+
+
+@api.get("/health")
+def health_check():
+    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
+
+@api.post("/import-mml")
+async def import_mml(file: UploadFile | None = File(default=None)):
+    if file is None:
+        return _error("未上传文件", 400)
+    if not file.filename:
+        return _error("文件名为空", 400)
+    if not _is_mml_file(file):
+        return _error("只支持.mml格式文件", 400)
+    temp_path = None
+    try:
+        temp_path = await _save_upload(file, "import_")
+        result = mml_service.import_mml_file(temp_path)
+        return JSONResponse(result, status_code=400) if "error" in result else result
+    except Exception as exc:
+        return _error(f"导入失败: {exc}", 500)
+    finally:
+        if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
 
-@api.route("/compare-mml", methods=["POST"])
-def compare_mml():
-    """对比基线和目标 MML 文件；文件仅临时读取，不导入数据库。"""
-    baseline = request.files.get("baseline")
-    target = request.files.get("target")
+@api.post("/compare-mml")
+async def compare_mml(
+    baseline: UploadFile | None = File(default=None),
+    target: UploadFile | None = File(default=None),
+):
     if not _is_mml_file(baseline) or not _is_mml_file(target):
-        return jsonify({"error": "请上传两份 .mml 文件"}), 400
-
-    files = (("baseline", baseline), ("target", target))
-    temp_paths = []
+        return _error("请上传两份 .mml 文件", 400)
+    temp_paths: list[str] = []
     try:
-        for label, uploaded in files:
-            uploaded.stream.seek(0, os.SEEK_END)
-            size = uploaded.stream.tell()
-            uploaded.stream.seek(0)
-            if size > MAX_COMPARE_FILE_SIZE:
-                return jsonify({"error": "单个文件不能超过 20 MB"}), 413
-            safe_name = secure_filename(uploaded.filename) or f"{label}.mml"
-            path = os.path.join(DB_DIR, f"compare_{label}_{datetime.now().timestamp()}_{safe_name}")
-            uploaded.save(path)
-            temp_paths.append(path)
-        return jsonify(mml_service.compare_mml_files(temp_paths[0], temp_paths[1]))
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        return jsonify({"error": f"对比失败: {str(e)}"}), 500
+        temp_paths.append(await _save_upload(baseline, "compare_baseline_", MAX_COMPARE_FILE_SIZE))
+        temp_paths.append(await _save_upload(target, "compare_target_", MAX_COMPARE_FILE_SIZE))
+        return mml_service.compare_mml_files(temp_paths[0], temp_paths[1])
+    except ValueError as exc:
+        return _error(str(exc), 413 if "20 MB" in str(exc) else 400)
+    except Exception as exc:
+        return _error(f"对比失败: {exc}", 500)
     finally:
         for path in temp_paths:
             if os.path.exists(path):
                 os.remove(path)
 
 
-@api.route("/tables", methods=["GET"])
+@api.get("/tables")
 def get_tables():
-    """获取所有 MML 表"""
     try:
-        tables = mml_service.get_tables_summary()
-        return jsonify({"tables": tables})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return {"tables": mml_service.get_tables_summary()}
+    except Exception as exc:
+        return _error(str(exc), 500)
 
 
-@api.route("/configs", methods=["GET"])
-def get_configs():
-    """
-    获取配置列表。
-    ?table_name=XXX&page=1&page_size=20   → 指定表分页
-    无 table_name                          → 返回所有表概览
-    """
+@api.get("/configs")
+def get_configs(
+    table_name: str = "", page: int = Query(default=1), page_size: int = Query(default=20),
+    sort_by: str | None = None, sort_order: str = "asc",
+):
     try:
-        table_name = request.args.get("table_name", "").strip()
-        page = request.args.get("page", 1, type=int)
-        page_size = request.args.get("page_size", 20, type=int)
-        sort_by = request.args.get("sort_by") or None
-        sort_order = request.args.get("sort_order", "asc")
-
+        table_name = table_name.strip()
         if table_name:
-            result = mml_service.get_configs(table_name, page, page_size, sort_by, sort_order)
-        else:
-            # 未指定表：返回概览
-            summary = {}
-            tables = mml_service.get_tables_summary()
-            for t in tables:
-                summary[t["table_name"]] = {
-                    "count": t["count"],
-                    "columns": t["columns"],
-                }
-            result = {
-                "tables_summary": summary,
-                "configs": [],
-                "total": 0,
-                "page": 1,
-                "page_size": page_size,
-                "total_pages": 1,
-            }
-
-        return jsonify(result)
-
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"查询失败: {str(e)}"}), 500
+            return mml_service.get_configs(table_name, page, page_size, sort_by, sort_order)
+        summary = {
+            table["table_name"]: {"count": table["count"], "columns": table["columns"]}
+            for table in mml_service.get_tables_summary()
+        }
+        return {"tables_summary": summary, "configs": [], "total": 0, "page": 1,
+                "page_size": page_size, "total_pages": 1}
+    except ValueError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(f"查询失败: {exc}", 500)
 
 
-@api.route("/configs", methods=["POST"])
-def add_config():
-    """新增配置行"""
-    data = request.get_json()
+@api.post("/configs", status_code=201)
+def add_config(data: dict[str, Any] | None = None):
     if not data:
-        return jsonify({"error": "请求数据为空"}), 400
-
-    table_name = data.get("table_name", "")
-    config_data = data.get("config_data", {})
+        return _error("请求数据为空", 400)
+    table_name, config_data = data.get("table_name", ""), data.get("config_data", {})
     if not table_name or not config_data:
-        return jsonify({"error": "需要 table_name 和 config_data"}), 400
-
+        return _error("需要 table_name 和 config_data", 400)
     try:
-        new_id = mml_service.add_config(table_name, config_data)
-        return jsonify({"message": "新增成功", "id": new_id}), 201
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"新增失败: {str(e)}"}), 500
+        return JSONResponse({"message": "新增成功", "id": mml_service.add_config(table_name, config_data)}, status_code=201)
+    except ValueError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(f"新增失败: {exc}", 500)
 
 
-@api.route("/configs/<int:config_id>", methods=["GET"])
-def get_config(config_id):
-    """获取单条配置"""
-    table_name = request.args.get("table_name", "")
-    if not table_name:
-        return jsonify({"error": "需要指定 table_name 参数"}), 400
-
-    try:
-        config = mml_service.get_config(table_name, config_id)
-        if not config:
-            return jsonify({"error": "配置不存在"}), 404
-        return jsonify(config)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@api.route("/configs/<int:config_id>", methods=["PUT"])
-def update_config(config_id):
-    """更新配置行"""
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "请求数据为空"}), 400
-
-    table_name = data.get("table_name", "")
-    config_data = data.get("config_data", {})
-
-    if not table_name:
-        return jsonify({"error": "需要指定 table_name"}), 400
-
-    try:
-        success = mml_service.update_config(table_name, config_id, config_data)
-        if not success:
-            return jsonify({"error": "配置不存在"}), 404
-        return jsonify({"message": "配置更新成功"})
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"更新失败: {str(e)}"}), 500
-
-
-@api.route("/configs/<int:config_id>", methods=["DELETE"])
-def delete_config(config_id):
-    """删除配置行"""
-    table_name = request.args.get("table_name", "")
-    if not table_name:
-        return jsonify({"error": "需要指定 table_name 参数"}), 400
-
-    try:
-        success = mml_service.delete_config(table_name, config_id)
-        if not success:
-            return jsonify({"error": "配置不存在"}), 404
-        return jsonify({"message": "配置删除成功"})
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"删除失败: {str(e)}"}), 500
-
-
-@api.route("/configs/batch-delete", methods=["POST"])
-def batch_delete_configs():
-    """批量删除配置行"""
-    data = request.get_json() or {}
-    table_name = data.get("table_name", "")
-    ids = data.get("ids", [])
+@api.post("/configs/batch-delete")
+def batch_delete_configs(data: dict[str, Any] | None = None):
+    data = data or {}
+    table_name, ids = data.get("table_name", ""), data.get("ids", [])
     if not table_name or not ids:
-        return jsonify({"error": "需要 table_name 和 ids"}), 400
-
+        return _error("需要 table_name 和 ids", 400)
     try:
         deleted = mml_service.batch_delete_configs(table_name, ids)
-        return jsonify({"message": f"成功删除 {deleted} 条配置", "deleted": deleted})
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"批量删除失败: {str(e)}"}), 500
+        return {"message": f"成功删除 {deleted} 条配置", "deleted": deleted}
+    except ValueError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(f"批量删除失败: {exc}", 500)
 
 
-@api.route("/export-mml", methods=["POST"])
-def export_mml():
-    """导出为 MML 文件"""
-    data = request.get_json() or {}
-    table_name = data.get("table_name")
-    ids = data.get("ids")
-
+@api.get("/configs/{config_id}")
+def get_config(config_id: int, table_name: str = ""):
+    if not table_name:
+        return _error("需要指定 table_name 参数", 400)
     try:
-        if ids:
-            result = mml_service.export_selected_rows(table_name, ids)
-        else:
-            result = mml_service.export_mml(table_name)
-        return jsonify(result)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 404
-    except Exception as e:
-        return jsonify({"error": f"导出失败: {str(e)}"}), 500
+        config = mml_service.get_config(table_name, config_id)
+        return config if config else _error("配置不存在", 404)
+    except ValueError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(str(exc), 500)
+
+
+@api.put("/configs/{config_id}")
+def update_config(config_id: int, data: dict[str, Any] | None = None):
+    if not data:
+        return _error("请求数据为空", 400)
+    table_name = data.get("table_name", "")
+    if not table_name:
+        return _error("需要指定 table_name", 400)
+    try:
+        success = mml_service.update_config(table_name, config_id, data.get("config_data", {}))
+        return {"message": "配置更新成功"} if success else _error("配置不存在", 404)
+    except ValueError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(f"更新失败: {exc}", 500)
+
+
+@api.delete("/configs/{config_id}")
+def delete_config(config_id: int, table_name: str = ""):
+    if not table_name:
+        return _error("需要指定 table_name 参数", 400)
+    try:
+        success = mml_service.delete_config(table_name, config_id)
+        return {"message": "配置删除成功"} if success else _error("配置不存在", 404)
+    except ValueError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(f"删除失败: {exc}", 500)
+
+
+@api.post("/export-mml")
+def export_mml(data: dict[str, Any] | None = None):
+    data = data or {}
+    table_name, ids = data.get("table_name"), data.get("ids")
+    try:
+        return mml_service.export_selected_rows(table_name, ids) if ids else mml_service.export_mml(table_name)
+    except ValueError as exc:
+        return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(f"导出失败: {exc}", 500)
