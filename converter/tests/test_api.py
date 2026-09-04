@@ -30,7 +30,7 @@ def test_import_rejects_missing_or_wrong_file_type():
 
 def test_import_accepts_txt_files():
     expected = {"message": "导入成功"}
-    with patch("controller.mml_controller.mml_service.import_mml_file", return_value=expected):
+    with patch("controller.mml_controller.mml_service.import_mml_text", return_value=expected):
         with TestClient(app) as client:
             response = client.post(
                 "/api/import-mml",
@@ -42,12 +42,12 @@ def test_import_accepts_txt_files():
 
 def test_compare_keeps_existing_response_contract():
     expected = {"summary": {"added": 0, "removed": 0, "modified": 0, "unchanged": 1}, "tables": []}
-    with patch("controller.mml_controller.mml_service.compare_mml_files", return_value=expected):
+    with patch("controller.mml_controller.mml_service.compare_mml_texts", return_value=expected):
         with TestClient(app) as client:
             response = client.post(
                 "/api/compare-mml",
                 files={
-                    "baseline": ("base.mml", b"SET CELL:ID=1;"),
+                    "baseline": ("base.txt", b"SET CELL:ID=1;"),
                     "target": ("target.mml", b"SET CELL:ID=1;"),
                 },
             )

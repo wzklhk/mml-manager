@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 """FastAPI 路由定义与 HTTP 请求/响应处理。"""
 
-import os
-import tempfile
 from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, File, Query, UploadFile
 from fastapi.responses import JSONResponse
 
-from config import get_settings
 from service import mml_service
 
 api = APIRouter(prefix="/api")
-DB_DIR = os.path.dirname(get_settings()["database"]["path"])
 MAX_COMPARE_FILE_SIZE = 20 * 1024 * 1024
 
 
@@ -21,35 +17,22 @@ def _error(message: str, status_code: int) -> JSONResponse:
     return JSONResponse({"error": message}, status_code=status_code)
 
 
-def _is_mml_file(file: UploadFile | None) -> bool:
-    return bool(file and file.filename and file.filename.lower().endswith(".mml"))
-
-
 def _is_import_file(file: UploadFile | None) -> bool:
     return bool(file and file.filename and file.filename.lower().endswith((".mml", ".txt")))
 
 
-async def _save_upload(file: UploadFile, prefix: str, max_size: int | None = None) -> str:
-    """流式保存上传文件，并可在写入过程中执行大小限制。"""
-    suffix = os.path.splitext(file.filename or "upload.mml")[1]
-    handle = tempfile.NamedTemporaryFile(
-        mode="wb", prefix=prefix, suffix=suffix, dir=DB_DIR or None, delete=False
-    )
+async def _read_upload(file: UploadFile, max_size: int | None = None) -> bytes:
+    """Read an upload into process memory, enforcing a limit while streaming."""
+    content = bytearray()
     size = 0
     try:
         while chunk := await file.read(1024 * 1024):
             size += len(chunk)
             if max_size is not None and size > max_size:
                 raise ValueError("单个文件不能超过 20 MB")
-            handle.write(chunk)
-        return handle.name
-    except Exception:
-        handle.close()
-        if os.path.exists(handle.name):
-            os.remove(handle.name)
-        raise
+            content.extend(chunk)
+        return bytes(content)
     finally:
-        handle.close()
         await file.close()
 
 
@@ -66,16 +49,12 @@ async def import_mml(file: UploadFile | None = File(default=None)):
         return _error("文件名为空", 400)
     if not _is_import_file(file):
         return _error("只支持 .mml 或 .txt 格式文件", 400)
-    temp_path = None
     try:
-        temp_path = await _save_upload(file, "import_")
-        result = mml_service.import_mml_file(temp_path)
+        content = await _read_upload(file)
+        result = mml_service.import_mml_text(mml_service.decode_mml_bytes(content))
         return JSONResponse(result, status_code=400) if "error" in result else result
     except Exception as exc:
         return _error(f"导入失败: {exc}", 500)
-    finally:
-        if temp_path and os.path.exists(temp_path):
-            os.remove(temp_path)
 
 
 @api.post("/compare-mml")
@@ -83,21 +62,16 @@ async def compare_mml(
     baseline: UploadFile | None = File(default=None),
     target: UploadFile | None = File(default=None),
 ):
-    if not _is_mml_file(baseline) or not _is_mml_file(target):
-        return _error("请上传两份 .mml 文件", 400)
-    temp_paths: list[str] = []
+    if not _is_import_file(baseline) or not _is_import_file(target):
+        return _error("请上传两份 .mml 或 .txt 文件", 400)
     try:
-        temp_paths.append(await _save_upload(baseline, "compare_baseline_", MAX_COMPARE_FILE_SIZE))
-        temp_paths.append(await _save_upload(target, "compare_target_", MAX_COMPARE_FILE_SIZE))
-        return mml_service.compare_mml_files(temp_paths[0], temp_paths[1])
+        baseline_text = mml_service.decode_mml_bytes(await _read_upload(baseline, MAX_COMPARE_FILE_SIZE))
+        target_text = mml_service.decode_mml_bytes(await _read_upload(target, MAX_COMPARE_FILE_SIZE))
+        return mml_service.compare_mml_texts(baseline_text, target_text)
     except ValueError as exc:
         return _error(str(exc), 413 if "20 MB" in str(exc) else 400)
     except Exception as exc:
         return _error(f"对比失败: {exc}", 500)
-    finally:
-        for path in temp_paths:
-            if os.path.exists(path):
-                os.remove(path)
 
 
 @api.get("/tables")

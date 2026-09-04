@@ -16,7 +16,6 @@ from fastapi.staticfiles import StaticFiles
 
 from config import load_config
 from controller.mml_controller import api
-from dao.mml_dao import init_db
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -24,8 +23,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    settings = load_config()
-    init_db(settings["database"]["path"])
+    load_config()
     yield
 
 

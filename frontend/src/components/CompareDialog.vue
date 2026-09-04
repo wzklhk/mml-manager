@@ -2,8 +2,8 @@
   <el-dialog :model-value="visible" :title="$t('compare.title')" width="min(1040px, 92vw)" destroy-on-close @close="close">
     <p class="compare-desc">{{ $t('compare.desc') }}</p>
     <div class="file-grid">
-      <label class="file-box"><span>{{ $t('compare.baseline') }}</span><input type="file" accept=".mml" @change="selectFile('baseline', $event)" /><small>{{ baseline ? baseline.name : $t('compare.no_file') }}</small></label>
-      <label class="file-box"><span>{{ $t('compare.target') }}</span><input type="file" accept=".mml" @change="selectFile('target', $event)" /><small>{{ target ? target.name : $t('compare.no_file') }}</small></label>
+      <label class="file-box"><span>{{ $t('compare.baseline') }}</span><input type="file" accept=".mml,.txt" @change="selectFile('baseline', $event)" /><small>{{ baseline ? baseline.name : $t('compare.no_file') }}</small></label>
+      <label class="file-box"><span>{{ $t('compare.target') }}</span><input type="file" accept=".mml,.txt" @change="selectFile('target', $event)" /><small>{{ target ? target.name : $t('compare.no_file') }}</small></label>
     </div>
     <div v-if="result" class="result-area">
       <div class="summary-grid">
