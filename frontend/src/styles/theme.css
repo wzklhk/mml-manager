@@ -79,6 +79,27 @@ html.dark {
 /* ====== 3. 全局重置 ====== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* 仅在主动切换主题时统一颜色动画，避免各组件以不同速度变化。 */
+html.theme-transitioning,
+html.theme-transitioning body,
+html.theme-transitioning body *,
+html.theme-transitioning body *::before,
+html.theme-transitioning body *::after {
+  transition-property: background-color, color, border-color, box-shadow, fill, stroke, opacity, transform !important;
+  transition-duration: 240ms !important;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning,
+  html.theme-transitioning body,
+  html.theme-transitioning body *,
+  html.theme-transitioning body *::before,
+  html.theme-transitioning body *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
 html, body {
   height: 100%; margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;

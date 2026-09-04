@@ -100,6 +100,7 @@ export default {
       selectedRows: [],
       showFooter: false,
       footerObserver: null,
+      themeTransitionTimer: null,
       sidebarCollapsed: false,
       pagination: { page: 1, pageSize: 20, total: 0 },
       editDialogVisible: false,
@@ -127,8 +128,9 @@ export default {
     document.title = this.$t('app.title')
     this.$nextTick(() => this.setupFooterObserver())
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.footerObserver) this.footerObserver.disconnect()
+    if (this.themeTransitionTimer) clearTimeout(this.themeTransitionTimer)
   },
   methods: {
     setupFooterObserver() {
@@ -147,9 +149,18 @@ export default {
     },
 
     toggleTheme() {
+      const root = document.documentElement
+      if (this.themeTransitionTimer) clearTimeout(this.themeTransitionTimer)
+      root.classList.add('theme-transitioning')
+      // 确保浏览器先应用统一的 transition，再切换整套主题变量。
+      void root.offsetWidth
       this.isDark = !this.isDark
       localStorage.setItem('theme', this.isDark ? 'dark' : 'light')
       this.applyTheme()
+      this.themeTransitionTimer = setTimeout(() => {
+        root.classList.remove('theme-transitioning')
+        this.themeTransitionTimer = null
+      }, 280)
     },
 
     toggleLang() {
