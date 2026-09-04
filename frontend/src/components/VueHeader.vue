@@ -23,6 +23,7 @@
       </el-menu>
     </div>
     <div class="header-right">
+      <el-button size="small" type="primary" plain @click="$emit('compare')">{{ $t('header.compare_mml') }}</el-button>
       <!-- 语言切换 -->
       <button class="header-icon-btn lang-btn" @click="$emit('toggle-lang')">
         {{ $i18n.locale === 'zh' ? 'EN' : '中文' }}

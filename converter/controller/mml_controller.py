@@ -7,6 +7,7 @@ Flask 路由定义，处理 HTTP 请求/响应。
 import os
 from datetime import datetime
 from flask import Blueprint, request, jsonify
+from werkzeug.utils import secure_filename
 
 from service import mml_service
 from dao import mml_dao
@@ -17,6 +18,11 @@ api = Blueprint("api", __name__, url_prefix="/api")
 
 # 数据库目录（用于存放临时文件）
 DB_DIR = os.path.dirname(get_settings()["database"]["path"])
+MAX_COMPARE_FILE_SIZE = 20 * 1024 * 1024
+
+
+def _is_mml_file(file) -> bool:
+    return bool(file and file.filename and file.filename.lower().endswith(".mml"))
 
 
 @api.route("/health", methods=["GET"])
@@ -34,7 +40,7 @@ def import_mml():
     file = request.files["file"]
     if file.filename == "":
         return jsonify({"error": "文件名为空"}), 400
-    if not file.filename.endswith(".mml"):
+    if not _is_mml_file(file):
         return jsonify({"error": "只支持.mml格式文件"}), 400
 
     temp_path = os.path.join(DB_DIR, f"temp_{datetime.now().timestamp()}.mml")
@@ -54,6 +60,38 @@ def import_mml():
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+
+@api.route("/compare-mml", methods=["POST"])
+def compare_mml():
+    """对比基线和目标 MML 文件；文件仅临时读取，不导入数据库。"""
+    baseline = request.files.get("baseline")
+    target = request.files.get("target")
+    if not _is_mml_file(baseline) or not _is_mml_file(target):
+        return jsonify({"error": "请上传两份 .mml 文件"}), 400
+
+    files = (("baseline", baseline), ("target", target))
+    temp_paths = []
+    try:
+        for label, uploaded in files:
+            uploaded.stream.seek(0, os.SEEK_END)
+            size = uploaded.stream.tell()
+            uploaded.stream.seek(0)
+            if size > MAX_COMPARE_FILE_SIZE:
+                return jsonify({"error": "单个文件不能超过 20 MB"}), 413
+            safe_name = secure_filename(uploaded.filename) or f"{label}.mml"
+            path = os.path.join(DB_DIR, f"compare_{label}_{datetime.now().timestamp()}_{safe_name}")
+            uploaded.save(path)
+            temp_paths.append(path)
+        return jsonify(mml_service.compare_mml_files(temp_paths[0], temp_paths[1]))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"对比失败: {str(e)}"}), 500
+    finally:
+        for path in temp_paths:
+            if os.path.exists(path):
+                os.remove(path)
 
 
 @api.route("/tables", methods=["GET"])

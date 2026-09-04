@@ -3,6 +3,7 @@
 
   "header.table_overview": "表概览",
   "header.import_mml": "导入 MML",
+  "header.compare_mml": "配置对比",
   "header.only_mml_file": "只能上传 .mml 文件!",
   "header.theme_light": "明亮",
   "header.theme_dark": "暗黑",
@@ -61,5 +62,12 @@
   "msg.export_fail": "导出失败: {msg}",
   "msg.add_success": "新增成功",
   "msg.save_success": "保存成功",
-  "msg.save_fail": "保存失败: {msg}"
+  "msg.save_fail": "保存失败: {msg}",
+  "compare.title": "MML 配置对比",
+  "compare.desc": "选择基线配置和现网/目标配置。文件仅用于本次对比，不会写入数据库。",
+  "compare.baseline": "基线配置", "compare.target": "目标配置", "compare.no_file": "尚未选择文件",
+  "compare.run": "开始对比", "compare.failed": "配置对比失败", "compare.added": "新增",
+  "compare.removed": "删除", "compare.modified": "修改", "compare.unchanged": "未变化",
+  "compare.key_field": "自动匹配字段", "compare.status": "状态", "compare.record": "配置标识",
+  "compare.details": "字段差异", "compare.no_changes": "两份配置完全一致"
 }

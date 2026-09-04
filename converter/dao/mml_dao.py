@@ -257,13 +257,14 @@ def query_row(table_name: str, rowid: int, columns: List[str]) -> Optional[Dict]
         }
 
 
-def query_all_rows(table_name: str, columns: List[str]) -> List[Dict]:
+def query_all_rows(table_name: str, columns: List[str], sort_by: str = None) -> List[Dict]:
     """查询表的所有行（用于导出）"""
     cols_quoted = [f'"{c}"' for c in columns]
     cols_str = ", ".join(cols_quoted)
 
     with DatabaseConnection() as db:
-        cursor = db.execute(f'SELECT {cols_str} FROM "{table_name}" ORDER BY rowid')
+        order_clause = f'"{sort_by}", rowid' if sort_by in columns else "rowid"
+        cursor = db.execute(f'SELECT {cols_str} FROM "{table_name}" ORDER BY {order_clause}')
         return [dict(row) for row in cursor.fetchall()]
 
 

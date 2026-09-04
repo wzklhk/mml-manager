@@ -3,6 +3,7 @@
 
   "header.table_overview": "Overview",
   "header.import_mml": "Import MML",
+  "header.compare_mml": "Compare",
   "header.only_mml_file": "Only .mml files are allowed!",
   "header.theme_light": "Light",
   "header.theme_dark": "Dark",
@@ -61,5 +62,12 @@
   "msg.export_fail": "Export failed: {msg}",
   "msg.add_success": "Added successfully",
   "msg.save_success": "Saved successfully",
-  "msg.save_fail": "Save failed: {msg}"
+  "msg.save_fail": "Save failed: {msg}",
+  "compare.title": "Compare MML Configurations",
+  "compare.desc": "Choose a baseline and target. Files are compared temporarily and are not imported.",
+  "compare.baseline": "Baseline", "compare.target": "Target", "compare.no_file": "No file selected",
+  "compare.run": "Compare", "compare.failed": "Configuration comparison failed", "compare.added": "Added",
+  "compare.removed": "Removed", "compare.modified": "Modified", "compare.unchanged": "Unchanged",
+  "compare.key_field": "Matched by", "compare.status": "Status", "compare.record": "Record",
+  "compare.details": "Field changes", "compare.no_changes": "The configurations are identical"
 }

@@ -14,6 +14,143 @@ from dao import mml_dao
 from utils.mml import format_mml_command
 
 
+KEY_FIELD_CANDIDATES = (
+    "ID", "INDEX", "SEQ", "SEQUENCE", "NAME", "MOID", "DN", "OBJECTID",
+)
+
+
+def _read_mml_text(file_path: str) -> str:
+    """读取常见网元导出编码，UTF-8 失败时兼容 GB18030。"""
+    with open(file_path, "rb") as f:
+        content = f.read()
+    for encoding in ("utf-8-sig", "gb18030"):
+        try:
+            return content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise ValueError("文件编码无法识别，请使用 UTF-8 或 GB18030 编码")
+
+
+def _parse_mml_text(text: str) -> Dict[str, List[Dict]]:
+    """解析文本，并支持一条命令跨多行书写。"""
+    tables: Dict[str, List[Dict]] = {}
+    buffer = ""
+    commands = []
+    quoted = False
+    index = 0
+    # 分号只有在引号外才表示命令结束；MML 用两个双引号表示引号转义。
+    while index < len(text):
+        char = text[index]
+        if char == '"':
+            if quoted and index + 1 < len(text) and text[index + 1] == '"':
+                buffer += '""'
+                index += 2
+                continue
+            quoted = not quoted
+        buffer += char
+        if char == ";" and not quoted:
+            commands.append(buffer)
+            buffer = ""
+        index += 1
+    if buffer.strip():
+        commands.append(buffer)
+
+    for raw_command in commands:
+        command_lines = []
+        for raw_line in raw_command.splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("--") or line.startswith("//") or line.startswith("ENTER"):
+                continue
+            command_lines.append(line)
+        parsed = parse_any_command(" ".join(command_lines))
+        if parsed:
+            tables.setdefault(parsed["table"], []).append(parsed)
+    return tables
+
+
+def _choose_key_fields(before: List[Dict], after: List[Dict]) -> List[str]:
+    """选择两侧均存在且能唯一标识记录的字段。"""
+    rows = [item["values"] for item in before + after]
+    if not rows:
+        return []
+    common = set(rows[0])
+    for row in rows[1:]:
+        common.intersection_update(row)
+    candidates = [field for field in KEY_FIELD_CANDIDATES if field in common]
+    candidates.extend(sorted(field for field in common if field.endswith("_ID") and field not in candidates))
+    for field in candidates:
+        before_keys = [str(item["values"].get(field, "")) for item in before]
+        after_keys = [str(item["values"].get(field, "")) for item in after]
+        if all(before_keys + after_keys) and len(before_keys) == len(set(before_keys)) and len(after_keys) == len(set(after_keys)):
+            return [field]
+    return []
+
+
+def _record_key(values: Dict, fields: List[str]) -> str:
+    return " | ".join(f"{field}={values.get(field, '')}" for field in fields)
+
+
+def compare_mml_files(baseline_path: str, target_path: str) -> Dict:
+    """对比两份 MML 配置，返回表级和字段级差异，不写入数据库。"""
+    baseline = _parse_mml_text(_read_mml_text(baseline_path))
+    target = _parse_mml_text(_read_mml_text(target_path))
+    if not baseline and not target:
+        raise ValueError("两份文件中都没有找到有效的 SET/ADD 命令")
+
+    table_results = []
+    totals = {"added": 0, "removed": 0, "modified": 0, "unchanged": 0}
+    for table_name in sorted(set(baseline) | set(target)):
+        before = baseline.get(table_name, [])
+        after = target.get(table_name, [])
+        key_fields = _choose_key_fields(before, after)
+        warning = None
+        if key_fields:
+            before_map = {_record_key(item["values"], key_fields): item["values"] for item in before}
+            after_map = {_record_key(item["values"], key_fields): item["values"] for item in after}
+        else:
+            # 无稳定主键时仍可准确识别完全相同、新增和删除，避免错误地配对为“修改”。
+            warning = "未发现唯一标识字段，无法判定字段级修改；差异按完整配置行识别"
+            def canonical(item):
+                return json.dumps(item["values"], ensure_ascii=False, sort_keys=True)
+            before_map = {canonical(item): item["values"] for item in before}
+            after_map = {canonical(item): item["values"] for item in after}
+
+        diffs = []
+        for key in sorted(set(before_map) | set(after_map)):
+            old = before_map.get(key)
+            new = after_map.get(key)
+            if old is None:
+                status, changes = "added", []
+            elif new is None:
+                status, changes = "removed", []
+            elif old != new:
+                status = "modified"
+                changes = [
+                    {"field": field, "before": old.get(field), "after": new.get(field)}
+                    for field in sorted(set(old) | set(new))
+                    if old.get(field) != new.get(field)
+                ]
+            else:
+                status, changes = "unchanged", []
+            totals[status] += 1
+            if status != "unchanged":
+                diffs.append({"key": key, "status": status, "before": old, "after": new, "changes": changes})
+
+        table_results.append({
+            "table_name": table_name,
+            "key_fields": key_fields,
+            "baseline_count": len(before),
+            "target_count": len(after),
+            "warning": warning,
+            "diffs": diffs,
+            "summary": {
+                status: sum(1 for diff in diffs if diff["status"] == status)
+                for status in ("added", "removed", "modified")
+            },
+        })
+    return {"summary": totals, "tables": table_results}
+
+
 def import_mml_file(file_path: str) -> Dict:
     """
     导入 MML 文件。
@@ -119,6 +256,9 @@ def get_configs(
         raise ValueError(f"表 {table_name} 不存在")
 
     columns = json.loads(meta["columns_json"])
+    if not sort_by:
+        # 默认按网元对象标识排序，避免导入顺序不同导致页面与导出结果难以核对。
+        sort_by = next((field for field in KEY_FIELD_CANDIDATES if field in columns), None)
     rows, total = mml_dao.query_rows(table_name, columns, page, page_size, sort_by, sort_order)
 
     configs = []
@@ -265,7 +405,8 @@ def export_mml(table_name: Optional[str] = None) -> Dict:
     for meta in metas:
         tname = meta["table_name"]
         columns = json.loads(meta["columns_json"])
-        rows = mml_dao.query_all_rows(tname, columns)
+        sort_field = next((field for field in KEY_FIELD_CANDIDATES if field in columns), None)
+        rows = mml_dao.query_all_rows(tname, columns, sort_field)
         if not rows:
             continue
 

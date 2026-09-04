@@ -10,6 +10,7 @@
       @upload-error="handleUploadError"
       @toggle-theme="toggleTheme"
       @toggle-lang="toggleLang"
+      @compare="compareDialogVisible = true"
       @logo-click="backToOverview"
     />
 
@@ -69,6 +70,7 @@
       :form="editForm"
       @save="saveEdit"
     />
+    <CompareDialog v-model:visible="compareDialogVisible" />
 
     <AppFooter :show-footer="showFooter" />
   </div>
@@ -81,11 +83,12 @@ import TableOverview from './components/TableOverview.vue'
 import TableDetail from './components/TableDetail.vue'
 import EditDialog from './components/EditDialog.vue'
 import AppFooter from './components/AppFooter.vue'
+import CompareDialog from './components/CompareDialog.vue'
 import axios from 'axios'
 
 export default {
   name: 'App',
-  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, AppFooter },
+  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, AppFooter, CompareDialog },
   data() {
     return {
       configs: [],
@@ -104,7 +107,8 @@ export default {
       editForm: {},
       sort: { prop: null, order: null },
       isDark: localStorage.getItem('theme') === 'dark',
-      uploading: false
+      uploading: false,
+      compareDialogVisible: false
     }
   },
   computed: {
