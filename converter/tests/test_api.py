@@ -23,9 +23,21 @@ def test_import_rejects_missing_or_wrong_file_type():
         assert response.status_code == 400
         assert response.json() == {"error": "未上传文件"}
 
-        response = client.post("/api/import-mml", files={"file": ("data.txt", b"test")})
+        response = client.post("/api/import-mml", files={"file": ("data.csv", b"test")})
         assert response.status_code == 400
-        assert response.json() == {"error": "只支持.mml格式文件"}
+        assert response.json() == {"error": "只支持 .mml 或 .txt 格式文件"}
+
+
+def test_import_accepts_txt_files():
+    expected = {"message": "导入成功"}
+    with patch("controller.mml_controller.mml_service.import_mml_file", return_value=expected):
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/import-mml",
+                files={"file": ("commands.TXT", b"SET CELL:ID=1;")},
+            )
+    assert response.status_code == 200
+    assert response.json() == expected
 
 
 def test_compare_keeps_existing_response_contract():

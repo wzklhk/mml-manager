@@ -4,7 +4,7 @@
   "header.table_overview": "Overview",
   "header.import_mml": "Import MML",
   "header.compare_mml": "Compare",
-  "header.only_mml_file": "Only .mml files are allowed!",
+  "header.only_mml_file": "Only .mml or .txt files are allowed!",
   "header.theme_light": "Light",
   "header.theme_dark": "Dark",
   "header.lang_zh": "中文",

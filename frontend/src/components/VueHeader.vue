@@ -53,7 +53,7 @@
         @success="(r) => $emit('upload-success', r)"
         @error="(e) => $emit('upload-error', e)"
         :before-upload="beforeUpload"
-        accept=".mml"
+        accept=".mml,.txt"
         :show-file-list="false"
       >
         <el-button size="small" class="vue-btn-outline">
@@ -74,7 +74,7 @@ export default {
   },
   methods: {
     beforeUpload(file) {
-      if (!file.name.endsWith('.mml')) {
+      if (!['.mml', '.txt'].some(ext => file.name.toLowerCase().endsWith(ext))) {
         this.$message.error(this.$t('header.only_mml_file'))
         return false
       }

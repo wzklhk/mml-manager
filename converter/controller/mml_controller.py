@@ -25,6 +25,10 @@ def _is_mml_file(file: UploadFile | None) -> bool:
     return bool(file and file.filename and file.filename.lower().endswith(".mml"))
 
 
+def _is_import_file(file: UploadFile | None) -> bool:
+    return bool(file and file.filename and file.filename.lower().endswith((".mml", ".txt")))
+
+
 async def _save_upload(file: UploadFile, prefix: str, max_size: int | None = None) -> str:
     """流式保存上传文件，并可在写入过程中执行大小限制。"""
     suffix = os.path.splitext(file.filename or "upload.mml")[1]
@@ -60,8 +64,8 @@ async def import_mml(file: UploadFile | None = File(default=None)):
         return _error("未上传文件", 400)
     if not file.filename:
         return _error("文件名为空", 400)
-    if not _is_mml_file(file):
-        return _error("只支持.mml格式文件", 400)
+    if not _is_import_file(file):
+        return _error("只支持 .mml 或 .txt 格式文件", 400)
     temp_path = None
     try:
         temp_path = await _save_upload(file, "import_")

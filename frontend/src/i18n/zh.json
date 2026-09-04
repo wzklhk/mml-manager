@@ -4,7 +4,7 @@
   "header.table_overview": "表概览",
   "header.import_mml": "导入 MML",
   "header.compare_mml": "配置对比",
-  "header.only_mml_file": "只能上传 .mml 文件!",
+  "header.only_mml_file": "只能上传 .mml 或 .txt 文件!",
   "header.theme_light": "明亮",
   "header.theme_dark": "暗黑",
   "header.lang_zh": "中文",
