@@ -94,12 +94,17 @@ def infer_column_type(column_name: str) -> str:
     return "TEXT"
 
 
+def quote_identifier(identifier: str) -> str:
+    """将 SQLite 表名或列名安全地引用为标识符。"""
+    return '"' + identifier.replace('"', '""') + '"'
+
+
 def generate_create_table_sql(table_name: str, columns: List[str]) -> str:
     """生成 CREATE TABLE IF NOT EXISTS 语句"""
-    cols = [f'  "{c}" {infer_column_type(c)}' for c in columns]
+    cols = [f"  {quote_identifier(c)} {infer_column_type(c)}" for c in columns]
     nl = "\n"
     sep = ",\n"
-    return f"CREATE TABLE IF NOT EXISTS {table_name} ({nl}{sep.join(cols)}{nl});"
+    return f"CREATE TABLE IF NOT EXISTS {quote_identifier(table_name)} ({nl}{sep.join(cols)}{nl});"
 
 
 def generate_insert_sql(
@@ -119,7 +124,7 @@ def generate_insert_sql(
     """
     columns = list(data.keys())
     values = list(data.values())
-    cols_quoted = [f'"{c}"' for c in columns]
+    cols_quoted = [quote_identifier(c) for c in columns]
     cols_str = ", ".join(cols_quoted)
 
     if for_sql_file:
@@ -133,11 +138,11 @@ def generate_insert_sql(
             else:
                 escaped = str(v).replace(quote, quote + quote)
                 vals.append(f"{quote}{escaped}{quote}")
-        sql = f"INSERT INTO {table_name} ({cols_str}) VALUES ({', '.join(vals)});"
+        sql = f"INSERT INTO {quote_identifier(table_name)} ({cols_str}) VALUES ({', '.join(vals)});"
         return sql, []
     else:
         placeholders = ", ".join(["?"] * len(columns))
-        sql = f"INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders});"
+        sql = f"INSERT INTO {quote_identifier(table_name)} ({cols_str}) VALUES ({placeholders});"
         return sql, values
 
 
@@ -231,7 +236,7 @@ def generate_sql_script(
         columns = sorted(list(all_columns[table_name]))
         if include_comments:
             statements.append(f"-- {table_name} 表")
-        statements.append(f"DROP TABLE IF EXISTS {table_name};")
+        statements.append(f"DROP TABLE IF EXISTS {quote_identifier(table_name)};")
         statements.append(generate_create_table_sql(table_name, columns))
         statements.append("")
 
@@ -243,9 +248,9 @@ def generate_sql_script(
     if include_comments:
         statements.append("-- 查询示例")
         for tn in sorted(all_columns.keys()):
-            statements.append(f"-- SELECT COUNT(*) FROM {tn};")
+            statements.append(f"-- SELECT COUNT(*) FROM {quote_identifier(tn)};")
             if "ID" in all_columns[tn]:
-                statements.append(f"-- SELECT * FROM {tn} WHERE ID > 100 LIMIT 10;")
+                statements.append(f"-- SELECT * FROM {quote_identifier(tn)} WHERE ID > 100 LIMIT 10;")
             statements.append("")
 
     return statements
@@ -285,7 +290,7 @@ def create_database(db_path: str, configs_by_table: Dict, all_columns: Dict):
 
     for table_name in sorted(all_columns.keys()):
         columns = sorted(list(all_columns[table_name]))
-        conn.execute(f"DROP TABLE IF EXISTS {table_name};")
+        conn.execute(f"DROP TABLE IF EXISTS {quote_identifier(table_name)};")
         conn.execute(generate_create_table_sql(table_name, columns))
 
         for config in configs_by_table[table_name]:
