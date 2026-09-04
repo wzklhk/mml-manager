@@ -110,7 +110,7 @@ start_dev() {
 
     info "启动前端开发服务器 (port 8080)..."
     cd "$FRONTEND_DIR"
-    npm run serve &
+    npm run dev &
     FRONTEND_PID=$!
 
     echo ""

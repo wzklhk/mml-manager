@@ -7,15 +7,27 @@
 - MML 与 Excel、CSV、SQL、JSON 双向转换
 - 配置表查询、排序、分页、编辑和导出
 - 基线与现网 MML 的新增、删除、修改及字段级对比
-- UTF-8、GB18030 和跨行 MML 命令兼容
+- 完整解析 `ADD`/`SET`，兼容含空格命令名、单双引号值、UTF-8 与 GB18030
+- 导入、查看、编辑和对比默认在进程内存中完成
 
 ## 快速启动
 
+要求已安装 Python 3、Node.js 和 npm。在项目根目录运行：
+
+```powershell
+# Windows PowerShell
+.\run.ps1
+```
+
 ```bash
+# Linux / macOS
+chmod +x run.sh
 ./run.sh
 ```
 
-Windows PowerShell 使用 `.\run.ps1`。启动后访问 `http://localhost:5000`。
+脚本会安装依赖、构建前端并启动 FastAPI。启动后访问 `http://localhost:5000`；开发模式使用 `.\run.ps1 dev` 或 `./run.sh dev`。
+
+更多启动方式、环境配置和 API 地址见 Wiki 的[快速开始](https://github.com/wzklhk/mml-manager/wiki/Getting-Started)。
 
 ## 文档
 

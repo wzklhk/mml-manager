@@ -109,12 +109,13 @@ function start_dev {
 
     info "Starting backend (port 5000)..."
     Push-Location $CONVERTER_DIR
-    $backendJob = Start-Job -ScriptBlock { param($d) Push-Location $d; python app.py; Pop-Location } -ArgumentList $CONVERTER_DIR
+    $pythonExe = Join-Path $VENV_DIR "Scripts\python.exe"
+    $backendJob = Start-Job -ScriptBlock { param($d, $python) Push-Location $d; & $python app.py; Pop-Location } -ArgumentList $CONVERTER_DIR, $pythonExe
     Pop-Location
 
     info "Starting frontend dev server (port 8080)..."
     Push-Location $FRONTEND_DIR
-    $frontendJob = Start-Job -ScriptBlock { param($d) Push-Location $d; npm run serve; Pop-Location } -ArgumentList $FRONTEND_DIR
+    $frontendJob = Start-Job -ScriptBlock { param($d) Push-Location $d; npm run dev; Pop-Location } -ArgumentList $FRONTEND_DIR
     Pop-Location
 
     Write-Host ""
