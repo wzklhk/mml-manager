@@ -25,7 +25,9 @@ chmod +x run.sh
 ./run.sh
 ```
 
-脚本会安装依赖、构建前端并启动 FastAPI。启动后访问 `http://localhost:5000`；开发模式使用 `.\run.ps1 dev` 或 `./run.sh dev`。
+无参数运行脚本时，每次都会执行 `npm run build` 重新打包前端，然后启动 FastAPI。启动后访问 `http://localhost:5000`。
+
+前端没有变化且已有 `converter/static` 构建产物时，可使用 `.\run.ps1 start` 或 `./run.sh start` 跳过打包；日常开发使用 `.\run.ps1 dev` 或 `./run.sh dev`，由 Vite 提供热更新，也不会生成生产包。
 
 更多启动方式、环境配置和 API 地址见 Wiki 的[快速开始](https://github.com/wzklhk/mml-manager/wiki/Getting-Started)。
 
