@@ -98,8 +98,8 @@ export default {
 }
 
 .vue-aside {
-  background: #fff;
-  border-right: 1px solid #e8e8e8;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
   height: 100%;
   overflow: hidden;
   transition: width 0.25s ease;
@@ -125,7 +125,7 @@ export default {
   align-items: flex-start;
   justify-content: space-between;
   padding-bottom: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
   margin-bottom: 16px;
   gap: 8px;
 }
@@ -133,7 +133,7 @@ export default {
 .aside-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   margin: 0;
@@ -153,14 +153,14 @@ export default {
 .collapse-btn {
   border: none !important;
   background: transparent !important;
-  color: #999 !important;
+  color: var(--text-muted) !important;
   font-size: 13px;
   padding: 4px !important;
 }
 
 .collapse-btn:hover {
-  background: #f0f0f0 !important;
-  color: #555 !important;
+  background: var(--hover-bg) !important;
+  color: var(--text-secondary) !important;
 }
 
 .aside-section { margin-bottom: 20px; }
@@ -169,7 +169,7 @@ export default {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #999;
+  color: var(--text-muted);
   margin-bottom: 10px;
 }
 
@@ -186,10 +186,10 @@ export default {
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 13px;
-  color: #555;
+  color: var(--text-secondary);
   transition: background 0.15s;
 }
-.aside-column-item:hover { background: #f0f9f4; }
+.aside-column-item:hover { background: var(--hover-bg); }
 .col-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
@@ -213,13 +213,13 @@ export default {
   padding: 8px 10px;
   border-radius: 6px;
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
   cursor: pointer;
   transition: background 0.15s;
   gap: 6px;
 }
 .aside-table-item:hover {
-  background: #f0f9f4;
+  background: var(--hover-bg);
 }
 .table-item-name {
   flex: 1;
@@ -243,15 +243,15 @@ export default {
   transform: translateY(-50%);
   width: 24px;
   height: 48px;
-  background: #fff;
-  border: 1px solid #e8e8e8;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
   border-left: none;
   border-radius: 0 6px 6px 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #999;
+  color: var(--text-muted);
   font-size: 14px;
   z-index: 10;
   transition: color 0.15s, background 0.15s;
@@ -259,6 +259,6 @@ export default {
 
 .expand-trigger:hover {
   color: #41b883;
-  background: #f0f9f4;
+  background: var(--hover-bg);
 }
 </style>

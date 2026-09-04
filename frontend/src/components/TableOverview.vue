@@ -70,18 +70,18 @@ export default {
 .page-content { max-width: 1200px; margin: 0 auto; }
 .page-header { margin-bottom: 24px; }
 .page-title {
-  font-size: 24px; font-weight: 600; color: #1a1a2e;
+  font-size: 24px; font-weight: 600; color: var(--text-primary);
   margin: 0 0 6px 0; display: flex; align-items: center;
 }
-.page-desc { font-size: 14px; color: #888; margin: 0; line-height: 1.5; }
+.page-desc { font-size: 14px; color: var(--text-muted); margin: 0; line-height: 1.5; }
 .filter-card {
-  margin-bottom: 16px; border: 1px solid #e8e8e8; border-radius: 8px;
+  margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 8px;
 }
-.data-card { border: 1px solid #e8e8e8; border-radius: 8px; }
+.data-card { border: 1px solid var(--border-color); border-radius: 8px; }
 .data-card .el-card__body { padding: 16px; }
 .table-link { font-weight: 500; }
 .table-link:hover { color: #2c9c6f !important; }
 .col-tag {
-  margin: 2px 3px; border: none; background: #e8f5e9; color: #2e7d32;
+  margin: 2px 3px; border: none; background: var(--tag-bg); color: var(--tag-color);
 }
 </style>

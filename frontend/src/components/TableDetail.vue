@@ -104,21 +104,21 @@ export default {
 .page-content { max-width: 1200px; margin: 0 auto; }
 .page-header { margin-bottom: 24px; }
 .page-title {
-  font-size: 24px; font-weight: 600; color: #1a1a2e;
+  font-size: 24px; font-weight: 600; color: var(--text-primary);
   margin: 0 0 6px 0; display: flex; align-items: center;
 }
-.page-desc { font-size: 14px; color: #888; margin: 0; line-height: 1.5; }
+.page-desc { font-size: 14px; color: var(--text-muted); margin: 0; line-height: 1.5; }
 .inline-code {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  background: #f0f0f0; padding: 1px 6px; border-radius: 4px;
-  font-size: 12.5px; color: #476582;
+  background: var(--inline-code-bg); padding: 1px 6px; border-radius: 4px;
+  font-size: 12.5px; color: var(--inline-code-color);
 }
 .batch-toolbar {
-  margin-bottom: 12px; border: 1px solid #e8e8e8;
-  border-radius: 8px; background: #fafbfc;
+  margin-bottom: 12px; border: 1px solid var(--border-color);
+  border-radius: 8px; background: var(--bg-tertiary);
 }
 .batch-toolbar .el-card__body { padding: 12px 16px; }
-.batch-info { font-size: 13px; color: #555; }
+.batch-info { font-size: 13px; color: var(--text-secondary); }
 .batch-info strong { color: #e6a23c; font-size: 15px; }
 .vue-btn-outline-green {
   background: transparent !important;
@@ -130,11 +130,11 @@ export default {
   color: #2c9c6f !important; border-color: #2c9c6f !important;
 }
 .vue-btn-outline-green.is-disabled { border-color: #ddd !important; color: #ccc !important; }
-.data-card { border: 1px solid #e8e8e8; border-radius: 8px; }
+.data-card { border: 1px solid var(--border-color); border-radius: 8px; }
 .data-card .el-card__body { padding: 16px; }
 .cell-value {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 12.5px; color: #333;
+  font-size: 12.5px; color: var(--text-primary);
 }
 .pagination-wrapper { margin-top: 20px; display: flex; justify-content: flex-end; }
 </style>

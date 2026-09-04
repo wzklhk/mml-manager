@@ -106,7 +106,7 @@ export default {
       isNewRow: false,
       editForm: {},
       sort: { prop: null, order: null },
-      isDark: localStorage.getItem('theme') === 'dark',
+      isDark: document.documentElement.classList.contains('dark'),
       uploading: false,
       compareDialogVisible: false
     }
@@ -142,11 +142,8 @@ export default {
     },
 
     applyTheme() {
-      if (this.isDark) {
-        document.documentElement.classList.add('dark')
-      } else {
-        document.documentElement.classList.remove('dark')
-      }
+      document.documentElement.classList.toggle('dark', this.isDark)
+      document.documentElement.style.colorScheme = this.isDark ? 'dark' : 'light'
     },
 
     toggleTheme() {
