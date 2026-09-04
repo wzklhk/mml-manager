@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app
+from service import mml_service
 
 
 def test_health_and_openapi_are_available():
@@ -53,3 +54,16 @@ def test_compare_keeps_existing_response_contract():
             )
     assert response.status_code == 200
     assert response.json() == expected
+
+
+def test_snapshot_list_and_activation_endpoints():
+    first = mml_service.import_mml_text("SET FIRST:ID=1;", "first.mml")
+    second = mml_service.import_mml_text("SET SECOND:ID=2;", "second.mml")
+    with TestClient(app) as client:
+        listed = client.get("/api/snapshots")
+        assert listed.status_code == 200
+        assert listed.json()["active_id"] == second["snapshot"]["id"]
+
+        activated = client.post(f"/api/snapshots/{first['snapshot']['id']}/activate")
+        assert activated.status_code == 200
+        assert activated.json()["snapshot"]["name"] == "first.mml"

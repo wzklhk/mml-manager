@@ -5,6 +5,7 @@
   "header.import_mml": "Import MML",
   "header.compare_mml": "Compare",
   "header.only_mml_file": "Only .mml or .txt files are allowed!",
+  "header.select_config": "Switch configuration",
   "header.theme_light": "Light",
   "header.theme_dark": "Dark",
   "header.lang_zh": "中文",
@@ -17,7 +18,7 @@
   "sidebar.tables_title": "Tables",
 
   "overview.title": "Table Overview",
-  "overview.desc": "All configuration tables in database",
+  "overview.desc": "All command tables in the active configuration",
   "overview.search_placeholder": "Search table name...",
   "overview.refresh": "Refresh",
   "overview.table_name": "Table Name",
@@ -52,6 +53,8 @@
   "confirm.btn_cancel": "Cancel",
 
   "msg.load_tables_fail": "Failed to load tables: {msg}",
+  "msg.load_snapshots_fail": "Failed to load configurations: {msg}",
+  "msg.switch_snapshot_fail": "Failed to switch configuration: {msg}",
   "msg.load_configs_fail": "Failed to load configurations: {msg}",
   "msg.upload_fail": "Upload failed, please check the file format",
   "msg.delete_success": "Deleted successfully",

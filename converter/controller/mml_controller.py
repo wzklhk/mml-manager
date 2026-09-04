@@ -51,7 +51,7 @@ async def import_mml(file: UploadFile | None = File(default=None)):
         return _error("只支持 .mml 或 .txt 格式文件", 400)
     try:
         content = await _read_upload(file)
-        result = mml_service.import_mml_text(mml_service.decode_mml_bytes(content))
+        result = mml_service.import_mml_text(mml_service.decode_mml_bytes(content), file.filename)
         return JSONResponse(result, status_code=400) if "error" in result else result
     except Exception as exc:
         return _error(f"导入失败: {exc}", 500)
@@ -80,6 +80,19 @@ def get_tables():
         return {"tables": mml_service.get_tables_summary()}
     except Exception as exc:
         return _error(str(exc), 500)
+
+
+@api.get("/snapshots")
+def get_snapshots():
+    return mml_service.get_snapshots()
+
+
+@api.post("/snapshots/{snapshot_id}/activate")
+def activate_snapshot(snapshot_id: str):
+    try:
+        return {"snapshot": mml_service.activate_snapshot(snapshot_id)}
+    except ValueError as exc:
+        return _error(str(exc), 404)
 
 
 @api.get("/configs")

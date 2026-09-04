@@ -5,6 +5,7 @@
 """
 
 import json
+import os
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -127,27 +128,38 @@ def compare_mml_texts(baseline_text: str, target_text: str) -> Dict:
 
 def import_mml_file(file_path: str) -> Dict:
     """Parse a file into the active in-memory snapshot."""
-    return import_mml_text(_read_mml_text(file_path))
+    return import_mml_text(_read_mml_text(file_path), os.path.basename(file_path))
 
 
-def import_mml_text(text: str) -> Dict:
-    """Parse text and atomically replace the active in-memory snapshot."""
+def import_mml_text(text: str, name: str = "未命名配置") -> Dict:
+    """Parse text, add a named snapshot, and make it active."""
     tables = _parse_mml_text(text)
     total_count = sum(len(commands) for commands in tables.values())
     if not total_count:
         return {"error": "未找到有效的MML命令"}
-    store.replace(tables)
+    snapshot = store.add_snapshot(tables, name)
     return {
         "message": f"成功解析 {total_count} 条配置到内存",
         "tables": list(tables),
         "total_count": total_count,
+        "snapshot": snapshot,
     }
+
+
+def get_snapshots() -> Dict:
+    snapshots, active_id = store.list_snapshots()
+    return {"snapshots": snapshots, "active_id": active_id}
+
+
+def activate_snapshot(snapshot_id: str) -> Dict:
+    return store.activate(snapshot_id)
 
 
 def get_tables_summary() -> List[Dict]:
     tables, loaded_at = store.snapshot()
     return [{"table_name": name, "columns": table["columns"], "count": len(table["rows"]),
-             "created_at": loaded_at or ""} for name, table in tables.items()]
+             "created_at": loaded_at or ""}
+            for name, table in sorted(tables.items(), key=lambda item: item[0].casefold())]
 
 
 def get_configs(

@@ -23,6 +23,16 @@
       </el-menu>
     </div>
     <div class="header-right">
+      <el-select
+        v-if="snapshots.length"
+        :model-value="activeSnapshotId"
+        class="snapshot-select"
+        size="small"
+        :placeholder="$t('header.select_config')"
+        @change="$emit('snapshot-change', $event)"
+      >
+        <el-option v-for="item in snapshots" :key="item.id" :label="item.name" :value="item.id" />
+      </el-select>
       <el-button size="small" type="primary" plain @click="$emit('compare')">{{ $t('header.compare_mml') }}</el-button>
       <!-- 语言切换 -->
       <button class="header-icon-btn lang-btn" @click="$emit('toggle-lang')">
@@ -79,7 +89,9 @@ export default {
   props: {
     menuActive: { type: String, default: 'overview' },
     selectedTable: { type: String, default: '' },
-    isDark: { type: Boolean, default: false }
+    isDark: { type: Boolean, default: false },
+    snapshots: { type: Array, default: () => [] },
+    activeSnapshotId: { type: String, default: '' }
   },
   methods: {
     beforeUpload(file) {
@@ -166,6 +178,7 @@ export default {
   color: var(--header-text-active);
   background: var(--header-btn-bg-hover);
 }
+.snapshot-select { width: 220px; margin-right: 6px; }
 .theme-icon-enter-active,
 .theme-icon-leave-active {
   transition: opacity 0.12s ease, transform 0.12s ease;

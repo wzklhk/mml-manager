@@ -4,6 +4,8 @@
       :menu-active="menuActive"
       :selected-table="selectedTable"
       :is-dark="isDark"
+      :snapshots="snapshots"
+      :active-snapshot-id="activeSnapshotId"
       @menu-select="handleMenuSelect"
       @upload-start="handleUploadStart"
       @upload-success="handleUploadSuccess"
@@ -11,6 +13,7 @@
       @toggle-theme="toggleTheme"
       @toggle-lang="toggleLang"
       @compare="compareDialogVisible = true"
+      @snapshot-change="switchSnapshot"
       @logo-click="backToOverview"
     />
 
@@ -93,6 +96,8 @@ export default {
     return {
       configs: [],
       tables: [],
+      snapshots: [],
+      activeSnapshotId: '',
       selectedTable: '',
       currentColumns: [],
       loading: false,
@@ -124,6 +129,7 @@ export default {
   },
   mounted() {
     this.applyTheme()
+    this.loadSnapshots()
     this.loadTables()
     document.title = this.$t('app.title')
     this.$nextTick(() => this.setupFooterObserver())
@@ -187,6 +193,28 @@ export default {
     },
 
     handleSelectionChange(rows) { this.selectedRows = rows },
+
+    async loadSnapshots() {
+      try {
+        const res = await axios.get('/api/snapshots')
+        this.snapshots = res.data.snapshots
+        this.activeSnapshotId = res.data.active_id || ''
+      } catch (e) {
+        this.$message.error(this.$t('msg.load_snapshots_fail', { msg: e.message }))
+      }
+    },
+
+    async switchSnapshot(snapshotId) {
+      if (!snapshotId || snapshotId === this.activeSnapshotId) return
+      try {
+        await axios.post(`/api/snapshots/${snapshotId}/activate`)
+        this.activeSnapshotId = snapshotId
+        this.backToOverview()
+        await this.loadTables()
+      } catch (e) {
+        this.$message.error(this.$t('msg.switch_snapshot_fail', { msg: e.message }))
+      }
+    },
 
     async loadTables() {
       try {
@@ -258,8 +286,9 @@ export default {
     handleUploadSuccess(response) {
       this.uploading = false
       this.$message.success(response.message)
+      this.loadSnapshots()
+      this.backToOverview()
       this.loadTables()
-      if (this.selectedTable) this.loadConfigs()
     },
     handleUploadError(error) {
       this.uploading = false
