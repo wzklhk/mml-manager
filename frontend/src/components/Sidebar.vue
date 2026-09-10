@@ -1,7 +1,7 @@
 <template>
   <div class="sidebar-wrapper">
     <div v-if="collapsed" class="expand-trigger" @click="$emit('toggle-sidebar')" :title="$t('sidebar.expand')">
-      <i class="el-icon-s-unfold"></i>
+      <span aria-hidden="true">›</span>
     </div>
 
     <el-aside :width="collapsed ? '0' : '260px'" class="vue-aside">
@@ -21,7 +21,7 @@
                 @click="$emit('toggle-sidebar')"
                 :title="$t('sidebar.collapse')"
               >
-                <i class="el-icon-d-arrow-left"></i>
+                <span aria-hidden="true">‹</span>
               </el-button>
             </div>
           </div>
@@ -58,7 +58,7 @@
                 @click="$emit('toggle-sidebar')"
                 :title="$t('sidebar.collapse')"
               >
-                <i class="el-icon-d-arrow-left"></i>
+                <span aria-hidden="true">‹</span>
               </el-button>
             </div>
           </div>

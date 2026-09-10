@@ -2,11 +2,11 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [vue()],
 
   // 生产环境：前端静态文件由 FastAPI 在 /static 路径下提供
-  base: '/static/',
+  base: command === 'serve' ? '/' : '/static/',
 
   build: {
     outDir: resolve(__dirname, '../converter/static'),
@@ -22,4 +22,4 @@ export default defineConfig({
       }
     }
   }
-})
+}))

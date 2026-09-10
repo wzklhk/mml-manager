@@ -1,26 +1,8 @@
 <template>
   <el-header class="vue-header">
     <div class="header-left">
-      <div class="header-logo" @click="$emit('logo-click')" style="cursor: pointer;">
-        <svg class="vue-logo" viewBox="0 0 261.76 226.69" width="28" height="24">
-          <path d="M161.096.001l-30.224 52.35L100.647.002H-.005l130.877 226.688L261.76.001z" fill="#41b883"/>
-          <path d="M161.096.001l-30.224 52.35L100.647.002H52.346l78.526 136.01L209.398.001z" fill="#34495e"/>
-        </svg>
-        <span class="header-title">{{ $t('app.title') }}</span>
-      </div>
-      <el-menu
-        :default-active="menuActive"
-        mode="horizontal"
-        class="vue-nav-menu"
-        @select="$emit('menu-select', $event)"
-      >
-        <el-menu-item index="overview">
-          <i class="el-icon-menu"></i> {{ $t('header.table_overview') }}
-        </el-menu-item>
-        <el-menu-item v-if="selectedTable" index="detail">
-          <i class="el-icon-document"></i> {{ selectedTable }}
-        </el-menu-item>
-      </el-menu>
+      <el-button text @click="$emit('menu-select', 'overview')">{{ $t('header.table_overview') }}</el-button>
+      <span v-if="selectedTable" class="selected-table-name">{{ selectedTable }}</span>
     </div>
     <div class="header-right">
       <el-select
@@ -68,7 +50,6 @@
       <el-upload
         class="header-upload"
         action="/api/import-mml"
-        @start="$emit('upload-start')"
         @success="(r) => $emit('upload-success', r)"
         @error="(e) => $emit('upload-error', e)"
         :before-upload="beforeUpload"
@@ -99,6 +80,7 @@ export default {
         this.$message.error(this.$t('header.only_mml_file'))
         return false
       }
+      this.$emit('upload-start')
       return true
     }
   }
@@ -112,16 +94,23 @@ export default {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  height: 56px !important;
+  min-height: 56px;
+  height: auto !important;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--header-border);
   flex-shrink: 0;
   z-index: 100;
   transition: background 0.3s;
 }
+.selected-table-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .header-left {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 12px;
+  min-width: 0;
 }
 .header-logo {
   display: flex;
@@ -157,6 +146,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 /* ---- Icon-style buttons ---- */

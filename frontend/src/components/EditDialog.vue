@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     :title="isNewRow ? $t('dialog.add_row') : $t('dialog.edit_config')"
-    :visible.sync="dialogVisible"
+    v-model="dialogVisible"
     width="520px"
     :close-on-click-modal="false"
     top="8vh"
@@ -11,10 +11,10 @@
         <el-input v-model="form[col]" :placeholder="$t('dialog.input_placeholder', { col })" clearable />
       </el-form-item>
     </el-form>
-    <span slot="footer" class="dialog-footer">
+    <template #footer>
       <el-button @click="close">{{ $t('dialog.cancel') }}</el-button>
       <el-button type="success" @click="save">{{ isNewRow ? $t('dialog.add') : $t('dialog.save') }}</el-button>
-    </span>
+    </template>
   </el-dialog>
 </template>
 
