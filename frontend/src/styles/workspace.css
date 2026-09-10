@@ -64,7 +64,8 @@ a.module-card:hover { transform: translateY(-3px); border-color: #3eaf7c; box-sh
 }
 @media (max-width: 760px) {
   .global-header { gap: 12px; padding: 10px 14px; flex-wrap: wrap; }
-  .global-header-end { display: none; }
+  .global-header-end { display: flex; gap: 6px; }
+  .global-header-end > .el-button { display: none; }
   .workspace-home { padding: 24px 18px; }
   .home-intro { align-items: flex-start; flex-direction: column; }
   .module-sidebar { width: 132px; padding: 10px 6px; }

@@ -3,15 +3,12 @@
     <VueHeader
       :menu-active="menuActive"
       :selected-table="selectedTable"
-      :is-dark="isDark"
       :snapshots="snapshots"
       :active-snapshot-id="activeSnapshotId"
       @menu-select="handleMenuSelect"
       @upload-start="handleUploadStart"
       @upload-success="handleUploadSuccess"
       @upload-error="handleUploadError"
-      @toggle-theme="toggleTheme"
-      @toggle-lang="toggleLang"
       @compare="compareDialogVisible = true"
       @snapshot-change="switchSnapshot"
       @logo-click="backToOverview"
@@ -105,14 +102,12 @@ export default {
       selectedRows: [],
       showFooter: false,
       footerObserver: null,
-      themeTransitionTimer: null,
       sidebarCollapsed: false,
       pagination: { page: 1, pageSize: 20, total: 0 },
       editDialogVisible: false,
       isNewRow: false,
       editForm: {},
       sort: { prop: null, order: null },
-      isDark: document.documentElement.classList.contains('dark'),
       uploading: false,
       compareDialogVisible: false
     }
@@ -128,7 +123,6 @@ export default {
     }
   },
   mounted() {
-    this.applyTheme()
     this.loadSnapshots()
     this.loadTables()
 
@@ -141,7 +135,6 @@ export default {
   },
   beforeUnmount() {
     if (this.footerObserver) this.footerObserver.disconnect()
-    if (this.themeTransitionTimer) clearTimeout(this.themeTransitionTimer)
   },
   methods: {
     setupFooterObserver() {
@@ -154,32 +147,6 @@ export default {
       )
       this.footerObserver.observe(sentinel)
     },
-
-    applyTheme() {
-      document.documentElement.classList.toggle('dark', this.isDark)
-      document.documentElement.style.colorScheme = this.isDark ? 'dark' : 'light'
-    },
-
-    toggleTheme() {
-      const root = document.documentElement
-      if (this.themeTransitionTimer) clearTimeout(this.themeTransitionTimer)
-      root.classList.add('theme-transitioning')
-      // 确保浏览器先应用统一的 transition，再切换整套主题变量。
-      void root.offsetWidth
-      this.isDark = !this.isDark
-      localStorage.setItem('theme', this.isDark ? 'dark' : 'light')
-      this.applyTheme()
-      this.themeTransitionTimer = setTimeout(() => {
-        root.classList.remove('theme-transitioning')
-        this.themeTransitionTimer = null
-      }, 280)
-    },
-
-    toggleLang() {
-      const newLocale = this.$i18n.locale === 'zh' ? 'en' : 'zh'
-      this.$i18n.locale = newLocale
-      localStorage.setItem('locale', newLocale)
-      },
 
     handleMenuSelect(index) {
       if (index === 'overview') this.backToOverview()
