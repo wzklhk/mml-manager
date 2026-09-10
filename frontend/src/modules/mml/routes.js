@@ -3,6 +3,6 @@ export const mmlRoutes = [
   {
     path: 'query', name: 'mml-query',
     component: () => import('../../views/Mml/MmlQueryView.vue'),
-    meta: { title: '配置查询' }
+    meta: { title: 'workspace.query' }
   }
 ]

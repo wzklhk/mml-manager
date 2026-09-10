@@ -1,6 +1,5 @@
 {
   "app.title": "MML 配置管理系统",
-
   "header.table_overview": "表概览",
   "header.import_mml": "导入 MML",
   "header.compare_mml": "配置对比",
@@ -10,13 +9,11 @@
   "header.theme_dark": "暗黑",
   "header.lang_zh": "中文",
   "header.lang_en": "EN",
-
   "sidebar.expand": "展开侧栏",
   "sidebar.collapse": "折叠侧栏",
   "sidebar.rows": "行",
   "sidebar.columns_title": "列",
   "sidebar.tables_title": "表列表",
-
   "overview.title": "表概览",
   "overview.desc": "当前配置中的所有命令表",
   "overview.search_placeholder": "搜索表名...",
@@ -27,7 +24,6 @@
   "overview.created_at": "创建时间",
   "overview.actions": "操作",
   "overview.view": "查看",
-
   "detail.columns": "列",
   "detail.selected_rows": "已选择 {count} 行",
   "detail.batch_hint": "勾选左侧复选框进行批处理操作",
@@ -37,21 +33,18 @@
   "detail.actions": "操作",
   "detail.edit": "编辑",
   "detail.delete": "删除",
-
   "dialog.add_row": "新增行",
   "dialog.edit_config": "编辑配置",
   "dialog.input_placeholder": "请输入 {col}",
   "dialog.cancel": "取消",
   "dialog.add": "新增",
   "dialog.save": "保存",
-
   "confirm.delete_title": "确认删除",
   "confirm.delete_content": "确定要删除这条配置吗? 删除后不可恢复。",
   "confirm.batch_delete_title": "批量删除",
   "confirm.batch_delete_content": "确定要删除选中的 {count} 条配置吗? 删除后不可恢复。",
   "confirm.btn_confirm": "确定删除",
   "confirm.btn_cancel": "取消",
-
   "msg.load_tables_fail": "加载表名失败: {msg}",
   "msg.load_snapshots_fail": "加载配置列表失败: {msg}",
   "msg.switch_snapshot_fail": "切换配置失败: {msg}",
@@ -68,9 +61,102 @@
   "msg.save_fail": "保存失败: {msg}",
   "compare.title": "MML 配置对比",
   "compare.desc": "选择基线配置和现网/目标配置。文件仅用于本次对比，不会写入数据库。",
-  "compare.baseline": "基线配置", "compare.target": "目标配置", "compare.no_file": "尚未选择文件",
-  "compare.run": "开始对比", "compare.failed": "配置对比失败", "compare.added": "新增",
-  "compare.removed": "删除", "compare.modified": "修改", "compare.unchanged": "未变化",
-  "compare.key_field": "自动匹配字段", "compare.status": "状态", "compare.record": "配置标识",
-  "compare.details": "字段差异", "compare.no_changes": "两份配置完全一致"
+  "compare.baseline": "基线配置",
+  "compare.target": "目标配置",
+  "compare.no_file": "尚未选择文件",
+  "compare.run": "开始对比",
+  "compare.failed": "配置对比失败",
+  "compare.added": "新增",
+  "compare.removed": "删除",
+  "compare.modified": "修改",
+  "compare.unchanged": "未变化",
+  "compare.key_field": "自动匹配字段",
+  "compare.status": "状态",
+  "compare.record": "配置标识",
+  "compare.details": "字段差异",
+  "compare.no_changes": "两份配置完全一致",
+  "workspace": {
+    "home": "工作台",
+    "homepage": "首页",
+    "intro": "从配置管理出发，连接网络规划、资源与运维。",
+    "availableCount": "{count} 个模块可用",
+    "available": "可用",
+    "soon": "开发中",
+    "enter": "进入模块 →",
+    "switcher": "模块切换",
+    "globalSwitcher": "全局模块切换",
+    "search": "全局搜索 · 开发中",
+    "settings": "设置",
+    "settingsSoon": "系统设置开发中",
+    "menu": "模块菜单",
+    "toggleMenu": "折叠或展开模块菜单",
+    "functions": "当前模块功能",
+    "query": "配置查询",
+    "history": "查询历史",
+    "groups": {
+      "configuration": "配置管理",
+      "planning": "网络规划",
+      "resources": "网络资源",
+      "operations": "运维工具",
+      "system": "系统管理"
+    },
+    "modules": {
+      "mml": {
+        "name": "MML 配置管理",
+        "description": "查询、维护与对比网元配置，管理导入快照。"
+      },
+      "templates": {
+        "name": "配置模板",
+        "description": "统一维护可复用的配置模板。"
+      },
+      "generator": {
+        "name": "配置生成",
+        "description": "根据规划参数生成设备配置。"
+      },
+      "ipam": {
+        "name": "IP 地址规划",
+        "description": "规划地址池、子网与 IP 分配。"
+      },
+      "conflicts": {
+        "name": "子网冲突检测",
+        "description": "检查地址规划中的子网重叠。"
+      },
+      "lld": {
+        "name": "LLD 管理",
+        "description": "组织网络详细设计与交付文档。"
+      },
+      "elements": {
+        "name": "网元资源",
+        "description": "集中管理网元基础信息。"
+      },
+      "sites": {
+        "name": "站点管理",
+        "description": "整理站点与网络资源归属。"
+      },
+      "topology": {
+        "name": "网络拓扑",
+        "description": "呈现网络连接与资源关系。"
+      },
+      "checks": {
+        "name": "配置检查",
+        "description": "检查配置规范与一致性。"
+      },
+      "diff": {
+        "name": "数据对比",
+        "description": "跨来源的数据差异分析。"
+      },
+      "batch": {
+        "name": "批量配置",
+        "description": "组织跨网元批量配置任务。"
+      },
+      "transfer": {
+        "name": "数据导入导出",
+        "description": "系统级数据交换与备份。"
+      },
+      "settings": {
+        "name": "系统设置",
+        "description": "管理工作台全局设置。"
+      }
+    }
+  }
 }

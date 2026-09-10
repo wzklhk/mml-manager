@@ -1,11 +1,13 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 import { computed, inject } from 'vue'
 import { useRoute } from 'vue-router'
 import { getModule } from '../../modules/registry'
 import ModuleSwitcher from './ModuleSwitcher.vue'
 const { isDark, toggleTheme, toggleLang } = inject('appearance')
 const route = useRoute()
-const currentName = computed(() => getModule(route.meta.moduleId)?.name || '工作台')
+const currentName = computed(() => t(getModule(route.meta.moduleId)?.name || 'workspace.home'))
 </script>
 <template>
   <header class="global-header">
@@ -13,8 +15,8 @@ const currentName = computed(() => getModule(route.meta.moduleId)?.name || '工�
     <ModuleSwitcher />
     <span class="current-module">{{ currentName }}</span>
     <div class="global-header-end">
-      <el-input class="global-search" placeholder="全局搜索 · 开发中" aria-label="全局搜索（开发中）" disabled />
-      <el-button disabled title="系统设置开发中">设置</el-button>
+      <el-input class="global-search" :placeholder="t('workspace.search')" :aria-label="t('workspace.search')" disabled />
+      <el-button disabled :title="t('workspace.settingsSoon')">{{ t('workspace.settings') }}</el-button>
       <!-- 语言切换 -->
       <button type="button" class="header-icon-btn lang-btn" aria-label="中文 / English" @click="toggleLang()">
         {{ $i18n.locale === 'zh' ? 'EN' : '中文' }}

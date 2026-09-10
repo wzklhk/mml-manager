@@ -1,10 +1,16 @@
 <script setup>
-import { computed, onBeforeUnmount, provide, readonly, ref } from 'vue'
+import { computed, onBeforeUnmount, provide, readonly, ref, watchEffect } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import en from 'element-plus/dist/locale/en.mjs'
 
-const { locale } = useI18n()
+const { locale, t } = useI18n()
+const route = useRoute()
+watchEffect(() => {
+  document.title = t(route.meta.title || 'workspace.home') + ' · mml-manager'
+  document.documentElement.lang = locale.value === 'zh' ? 'zh-CN' : 'en'
+})
 const elementLocale = computed(() => locale.value === 'zh' ? zhCn : en)
 const isDark = ref(document.documentElement.classList.contains('dark'))
 let themeTransitionTimer

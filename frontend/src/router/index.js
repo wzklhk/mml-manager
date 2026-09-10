@@ -6,7 +6,7 @@ import { appModules } from '../modules/registry'
 
 export const routes = [
   { path: '/', component: HomeLayout, children: [
-    { path: '', name: 'home', component: HomeView, meta: { title: '工作台' } }
+    { path: '', name: 'home', component: HomeView, meta: { title: 'workspace.home' } }
   ] },
   ...appModules.filter(module => module.enabled && module.path && module.routes)
     .map(module => ({
@@ -18,5 +18,4 @@ export const routes = [
 
 // Resource base (/static/) is independent of the application URL root.
 const router = createRouter({ history: createWebHistory('/'), routes })
-router.afterEach(to => { document.title = (to.meta.title || '工作台') + ' · mml-manager' })
 export default router
