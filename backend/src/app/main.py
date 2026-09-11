@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """MML 配置管理 Web 服务的 FastAPI 入口。"""
 
-import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
 from fastapi import APIRouter, FastAPI
@@ -14,8 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from .api.routes import api
 from .core.config import load_config
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 frontend = APIRouter()
 
 
@@ -45,19 +44,19 @@ def create_app() -> FastAPI:
 
 @frontend.get("/")
 def serve_index():
-    index_path = os.path.join(STATIC_DIR, "index.html")
+    index_path = STATIC_DIR / "index.html"
     return (
         FileResponse(index_path)
-        if os.path.isfile(index_path)
+        if index_path.is_file()
         else JSONResponse({"error": "前端尚未构建"}, status_code=404)
     )
 
 
 @frontend.get("/{path:path}")
 def serve_static_or_fallback(path: str):
-    file_path = os.path.abspath(os.path.join(STATIC_DIR, path))
-    static_root = os.path.abspath(STATIC_DIR)
-    if os.path.commonpath((static_root, file_path)) == static_root and os.path.isfile(file_path):
+    static_root = STATIC_DIR.resolve()
+    file_path = (static_root / path).resolve()
+    if file_path.is_relative_to(static_root) and file_path.is_file():
         return FileResponse(file_path)
     if not path.startswith("api/"):
         return serve_index()
@@ -71,7 +70,7 @@ def run() -> None:
     """Run the development server using repository configuration."""
     settings = load_config()
     uvicorn.run(
-        "converter.main:app",
+        "app.main:app",
         host=settings["server"]["host"],
         port=settings["server"]["port"],
         reload=settings["server"]["debug"],

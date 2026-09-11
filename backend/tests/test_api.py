@@ -2,8 +2,8 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from converter.main import app
-from converter.services import mml as mml_service
+from app.main import app
+from app.services import mml as mml_service
 
 
 def test_health_and_openapi_are_available():
@@ -17,9 +17,9 @@ def test_health_and_openapi_are_available():
 def test_static_assets_are_not_intercepted_by_spa_fallback(tmp_path, monkeypatch):
     javascript = tmp_path / "app.js"
     javascript.write_text("console.log('ok')", encoding="utf-8")
-    monkeypatch.setattr("converter.main.STATIC_DIR", str(tmp_path))
+    monkeypatch.setattr("app.main.STATIC_DIR", tmp_path)
 
-    from converter.main import create_app
+    from app.main import create_app
 
     with TestClient(create_app()) as client:
         response = client.get("/static/app.js")
@@ -42,7 +42,7 @@ def test_import_rejects_missing_or_wrong_file_type():
 
 def test_import_accepts_txt_files():
     expected = {"message": "导入成功"}
-    with patch("converter.api.routes.mml_service.import_mml_text", return_value=expected):
+    with patch("app.api.routes.mml_service.import_mml_text", return_value=expected):
         with TestClient(app) as client:
             response = client.post(
                 "/api/import-mml",
@@ -54,7 +54,7 @@ def test_import_accepts_txt_files():
 
 def test_compare_keeps_existing_response_contract():
     expected = {"summary": {"added": 0, "removed": 0, "modified": 0, "unchanged": 1}, "tables": []}
-    with patch("converter.api.routes.mml_service.compare_mml_texts", return_value=expected):
+    with patch("app.api.routes.mml_service.compare_mml_texts", return_value=expected):
         with TestClient(app) as client:
             response = client.post(
                 "/api/compare-mml",

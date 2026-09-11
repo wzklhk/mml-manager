@@ -18,7 +18,7 @@
       <el-button size="default" @click="$emit('compare')">{{ $t("header.compare_mml") }}</el-button>
       <el-upload
         class="header-upload"
-        action="/api/import-mml"
+        :action="uploadUrl"
         @success="(r) => $emit('upload-success', r)"
         @error="(e) => $emit('upload-error', e)"
         :before-upload="beforeUpload"
@@ -34,6 +34,8 @@
 </template>
 
 <script>
+import { apiUrl } from "../api/client";
+
 export default {
   name: "VueHeader",
   props: {
@@ -41,6 +43,11 @@ export default {
     selectedTable: { type: String, default: "" },
     snapshots: { type: Array, default: () => [] },
     activeSnapshotId: { type: String, default: "" },
+  },
+  computed: {
+    uploadUrl() {
+      return apiUrl("/api/import-mml");
+    },
   },
   methods: {
     beforeUpload(file) {

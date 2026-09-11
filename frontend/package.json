@@ -12,8 +12,8 @@
     "format:check": "npm run format:check:vue && npm run format:check:python",
     "format:vue": "prettier --write .",
     "format:check:vue": "prettier --check .",
-    "format:python": "python -m black ../converter",
-    "format:check:python": "python -m black --check ../converter"
+    "format:python": "python -m black ../backend/src/app ../backend/tests",
+    "format:check:python": "python -m black --check ../backend/src/app ../backend/tests"
   },
   "dependencies": {
     "axios": "^0.27.2",

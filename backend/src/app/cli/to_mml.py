@@ -11,13 +11,10 @@ CLI: 各种格式 → MML 统一转换
 """
 
 import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
 
-from cli.utils import ensure_input_file, add_common_args
+from .utils import ensure_input_file, add_common_args
 
 
 def _convert_sql(input_file: str, output: str, encoding: str, cmd_type: str):

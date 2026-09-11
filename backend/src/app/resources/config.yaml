@@ -8,7 +8,7 @@ server:
 
 database:
   # 数据库文件路径（相对路径基于 config.yaml 所在目录）
-  path: mml_config.db
+  path: ../../../../data/mml_config.db
 
 logging:
   level: INFO

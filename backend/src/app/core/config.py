@@ -2,21 +2,24 @@
 """
 配置加载模块
 
-从 config.yaml 加载配置，提供全局 settings 对象。
+从包内 resources/config.yaml 加载配置，提供全局 settings 对象。
 搜索顺序：
-  1. 当前目录 ./config.yaml
-  2. ~/.mml-manager/config.yaml
-  3. 环境变量 MML_CONFIG_PATH
+  1. 环境变量 MML_CONFIG_PATH
+  2. 包内 resources/config.yaml
+  3. ~/.mml-manager/config.yaml
 
 所有相对路径解析基于配置文件所在目录。
 """
 
-import os
 from copy import deepcopy
-import yaml
+import os
+from pathlib import Path
 from typing import Any, Dict
 
-PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import yaml
+
+PACKAGE_DIR = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 # ---- 默认配置 ----
 DEFAULTS: Dict[str, Any] = {
@@ -26,7 +29,7 @@ DEFAULTS: Dict[str, Any] = {
         "debug": True,
     },
     "database": {
-        "path": "mml_config.db",
+        "path": str(PROJECT_ROOT / "data" / "mml_config.db"),
     },
     "logging": {
         "level": "INFO",
@@ -36,31 +39,30 @@ DEFAULTS: Dict[str, Any] = {
 _SETTINGS: Dict[str, Any] | None = None
 
 
-def _find_config() -> str | None:
+def _find_config() -> Path | None:
     """按优先级查找配置文件路径"""
     # 1. 环境变量指定
     env_path = os.environ.get("MML_CONFIG_PATH")
-    if env_path and os.path.isfile(env_path):
-        return env_path
+    if env_path and Path(env_path).is_file():
+        return Path(env_path)
 
     # 2. 当前目录（与 app.py 同级）
-    local_path = os.path.join(PACKAGE_DIR, "config.yaml")
-    if os.path.isfile(local_path):
+    local_path = PACKAGE_DIR / "resources" / "config.yaml"
+    if local_path.is_file():
         return local_path
 
     # 3. 用户家目录 ~/.mml-manager/config.yaml
-    home_path = os.path.expanduser("~/.mml-manager/config.yaml")
-    if os.path.isfile(home_path):
+    home_path = Path.home() / ".mml-manager" / "config.yaml"
+    if home_path.is_file():
         return home_path
 
     return None
 
 
-def _resolve_path(path: str, config_dir: str) -> str:
+def _resolve_path(path: str, config_dir: Path) -> str:
     """将相对路径解析为绝对路径（基于配置所在目录）"""
-    if os.path.isabs(path):
-        return path
-    return os.path.normpath(os.path.join(config_dir, path))
+    candidate = Path(path).expanduser()
+    return str(candidate if candidate.is_absolute() else (config_dir / candidate).resolve())
 
 
 def _merge(base: Dict, override: Dict) -> Dict:
@@ -84,10 +86,10 @@ def load_config() -> Dict[str, Any]:
     settings = deepcopy(DEFAULTS)
 
     config_path = _find_config()
-    config_dir = os.path.dirname(config_path) if config_path else os.getcwd()
+    config_dir = config_path.parent if config_path else PROJECT_ROOT
 
     if config_path:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with config_path.open("r", encoding="utf-8") as f:
             # 支持无 yaml 依赖时的降级（但实际 yaml 是必需依赖）
             try:
                 overrides = yaml.safe_load(f) or {}
@@ -102,9 +104,7 @@ def load_config() -> Dict[str, Any]:
     settings["database"]["path"] = _resolve_path(db_path, config_dir)
 
     # 确保数据库目录存在
-    db_dir = os.path.dirname(settings["database"]["path"])
-    if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
+    Path(settings["database"]["path"]).parent.mkdir(parents=True, exist_ok=True)
 
     _SETTINGS = settings
     return settings

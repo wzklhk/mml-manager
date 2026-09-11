@@ -84,7 +84,7 @@ import TableOverview from "../../components/TableOverview.vue";
 import TableDetail from "../../components/TableDetail.vue";
 import EditDialog from "../../components/EditDialog.vue";
 import CompareDialog from "../../components/CompareDialog.vue";
-import axios from "axios";
+import apiClient from "../../api/client";
 
 export default {
   name: "MmlQueryView",
@@ -176,7 +176,7 @@ export default {
 
     async loadSnapshots() {
       try {
-        const res = await axios.get("/api/snapshots");
+        const res = await apiClient.get("/api/snapshots");
         this.snapshots = res.data.snapshots;
         this.activeSnapshotId = res.data.active_id || "";
       } catch (e) {
@@ -187,7 +187,7 @@ export default {
     async switchSnapshot(snapshotId) {
       if (!snapshotId || snapshotId === this.activeSnapshotId) return;
       try {
-        await axios.post(`/api/snapshots/${snapshotId}/activate`);
+        await apiClient.post(`/api/snapshots/${snapshotId}/activate`);
         this.activeSnapshotId = snapshotId;
         this.backToOverview();
         await this.loadTables();
@@ -198,7 +198,7 @@ export default {
 
     async loadTables() {
       try {
-        const res = await axios.get("/api/tables");
+        const res = await apiClient.get("/api/tables");
         this.tables = res.data.tables;
         this.syncTablePagination();
       } catch (e) {
@@ -244,7 +244,7 @@ export default {
           params.sort_by = this.sort.prop;
           params.sort_order = this.sort.order;
         }
-        const res = await axios.get("/api/configs", { params });
+        const res = await apiClient.get("/api/configs", { params });
         this.configs = res.data.configs;
         this.pagination.total = res.data.total;
         this.pagination.page = res.data.page;
@@ -298,7 +298,7 @@ export default {
         .then(async () => {
           try {
             const ids = this.selectedRows.map((r) => r.id);
-            await axios.post("/api/configs/batch-delete", { table_name: this.selectedTable, ids });
+            await apiClient.post("/api/configs/batch-delete", { table_name: this.selectedTable, ids });
             this.$message.success(this.$t("msg.batch_delete_success", { count: ids.length }));
             this.selectedRows = [];
             this.loadConfigs();
@@ -314,7 +314,7 @@ export default {
       if (!this.selectedRows.length) return;
       try {
         const ids = this.selectedRows.map((r) => r.id);
-        const res = await axios.post("/api/export-mml", { table_name: this.selectedTable, ids });
+        const res = await apiClient.post("/api/export-mml", { table_name: this.selectedTable, ids });
         const blob = new Blob([res.data.content], { type: "text/plain" });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -350,10 +350,10 @@ export default {
           configData[col] = this.editForm[col] || "";
         });
         if (this.isNewRow) {
-          await axios.post("/api/configs", { table_name: this.selectedTable, config_data: configData });
+          await apiClient.post("/api/configs", { table_name: this.selectedTable, config_data: configData });
           this.$message.success(this.$t("msg.add_success"));
         } else {
-          await axios.put(`/api/configs/${this.editForm._id}`, {
+          await apiClient.put(`/api/configs/${this.editForm._id}`, {
             table_name: this.selectedTable,
             config_data: configData,
           });
@@ -375,7 +375,7 @@ export default {
       })
         .then(async () => {
           try {
-            await axios.delete(`/api/configs/${row.id}`, { params: { table_name: this.selectedTable } });
+            await apiClient.delete(`/api/configs/${row.id}`, { params: { table_name: this.selectedTable } });
             this.$message.success(this.$t("msg.delete_success"));
             this.loadConfigs();
           } catch (e) {

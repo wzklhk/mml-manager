@@ -2,16 +2,17 @@
 # MML 配置管理系统 - 一键构建 & 启动脚本 (PowerShell 版)
 #
 # 用法:
-#   .\run.ps1             构建前端 + 启动后端
-#   .\run.ps1 build       仅构建前端
-#   .\run.ps1 start       仅启动后端（假定已构建）
-#   .\run.ps1 dev         开发模式（后端 + 前端 dev server）
+#   .\scripts\run.ps1             构建前端 + 启动后端
+#   .\scripts\run.ps1 build       仅构建前端
+#   .\scripts\run.ps1 start       仅启动后端（假定已构建）
+#   .\scripts\run.ps1 dev         开发模式（后端 + 前端 dev server）
 # ============================================================
 
-$ROOT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
-$CONVERTER_DIR = Join-Path $ROOT_DIR "converter"
-$FRONTEND_DIR = Join-Path $ROOT_DIR "frontend"
-$VENV_DIR = Join-Path $CONVERTER_DIR ".venv"
+$SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
+$PROJECT_DIR = Split-Path -Parent $SCRIPT_DIR
+$BACKEND_DIR = Join-Path $PROJECT_DIR "backend"
+$FRONTEND_DIR = Join-Path $PROJECT_DIR "frontend"
+$VENV_DIR = Join-Path $BACKEND_DIR ".venv"
 
 # ---- 颜色 ----
 $CYAN = "Cyan"
@@ -63,7 +64,7 @@ function build_frontend {
 
     npm run build
     Pop-Location
-    $st = Join-Path $CONVERTER_DIR "static"
+    $st = Join-Path $BACKEND_DIR "src\app\static"
     ok "Frontend build complete -> $st"
 }
 
@@ -77,10 +78,12 @@ function ensure_venv {
     $activate = Join-Path $VENV_DIR "Scripts\Activate.ps1"
     . $activate
 
-    $flag = Join-Path $VENV_DIR ".deps_installed"
+    $flag = Join-Path $VENV_DIR ".backend_layout_deps_installed"
     if (-not (Test-Path $flag)) {
         info "Installing Python dependencies..."
-        pip install -q -r (Join-Path $CONVERTER_DIR "requirements.txt")
+        Push-Location $BACKEND_DIR
+        python -m pip install -q -e ".[test]"
+        Pop-Location
         New-Item -ItemType File -Path $flag -Force | Out-Null
         ok "Python dependencies installed"
     }
@@ -90,16 +93,16 @@ function ensure_venv {
 function start_backend {
     ensure_venv
 
-    $index = Join-Path $CONVERTER_DIR "static\index.html"
+    $index = Join-Path $BACKEND_DIR "src\app\static\index.html"
     if (-not (Test-Path $index)) {
-        warn "static\index.html not found, please run '.\run.ps1 build' first"
+        warn "static\index.html not found, please run '.\scripts\run.ps1 build' first"
         warn "  or: cd frontend; npm run build"
         exit 1
     }
 
     info "Starting backend service..."
-    Push-Location $ROOT_DIR
-    python -m converter.main
+    Push-Location $BACKEND_DIR
+    python -m app.main
     Pop-Location
 }
 
@@ -108,9 +111,9 @@ function start_dev {
     ensure_venv
 
     info "Starting backend (port 5000)..."
-    Push-Location $ROOT_DIR
+    Push-Location $BACKEND_DIR
     $pythonExe = Join-Path $VENV_DIR "Scripts\python.exe"
-    $backendJob = Start-Job -ScriptBlock { param($d, $python) Push-Location $d; & $python -m converter.main; Pop-Location } -ArgumentList $ROOT_DIR, $pythonExe
+    $backendJob = Start-Job -ScriptBlock { param($d, $python) Push-Location $d; & $python -m app.main; Pop-Location } -ArgumentList $BACKEND_DIR, $pythonExe
     Pop-Location
 
     info "Starting frontend dev server (port 8080)..."

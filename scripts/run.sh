@@ -3,17 +3,18 @@
 # MML 配置管理系统 — 一键构建 & 启动脚本
 #
 # 用法:
-#   ./run.sh             构建前端 + 启动后端
-#   ./run.sh build       仅构建前端
-#   ./run.sh start       仅启动后端（假定已构建）
-#   ./run.sh dev         开发模式（后端 + 前端 dev server）
+#   ./scripts/run.sh             构建前端 + 启动后端
+#   ./scripts/run.sh build       仅构建前端
+#   ./scripts/run.sh start       仅启动后端（假定已构建）
+#   ./scripts/run.sh dev         开发模式（后端 + 前端 dev server）
 # ============================================================
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONVERTER_DIR="$ROOT_DIR/converter"
-FRONTEND_DIR="$ROOT_DIR/frontend"
-VENV_DIR="$CONVERTER_DIR/.venv"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BACKEND_DIR="$PROJECT_DIR/backend"
+FRONTEND_DIR="$PROJECT_DIR/frontend"
+VENV_DIR="$BACKEND_DIR/.venv"
 
 # ---- 颜色 ----
 RED='\033[0;31m'
@@ -64,7 +65,7 @@ build_frontend() {
     fi
 
     npm run build
-    ok "前端构建完成 → $CONVERTER_DIR/static/"
+    ok "前端构建完成 → $BACKEND_DIR/src/app/static/"
 }
 
 # ---- Python venv + 依赖 ----
@@ -76,10 +77,10 @@ ensure_venv() {
 
     source "$VENV_DIR/bin/activate"
 
-    if [ ! -f "$VENV_DIR/.deps_installed" ]; then
+    if [ ! -f "$VENV_DIR/.backend_layout_deps_installed" ]; then
         info "安装 Python 依赖..."
-        pip install -q -r "$CONVERTER_DIR/requirements.txt"
-        touch "$VENV_DIR/.deps_installed"
+        (cd "$BACKEND_DIR" && python -m pip install -q -e ".[test]")
+        touch "$VENV_DIR/.backend_layout_deps_installed"
         ok "Python 依赖安装完成"
     fi
 }
@@ -88,15 +89,15 @@ ensure_venv() {
 start_backend() {
     ensure_venv
 
-    if [ ! -d "$CONVERTER_DIR/static" ] || [ ! -f "$CONVERTER_DIR/static/index.html" ]; then
-        warn "static/index.html 不存在，请先运行 ./run.sh build"
+    if [ ! -d "$BACKEND_DIR/src/app/static" ] || [ ! -f "$BACKEND_DIR/src/app/static/index.html" ]; then
+        warn "static/index.html 不存在，请先运行 ./scripts/run.sh build"
         warn "  或: cd frontend && npm run build"
         exit 1
     fi
 
     info "启动后端服务..."
-    cd "$ROOT_DIR"
-    exec python -m converter.main
+    cd "$BACKEND_DIR"
+    exec python -m app.main
 }
 
 # ---- 开发模式 ----
@@ -104,8 +105,8 @@ start_dev() {
     ensure_venv
 
     info "启动后端 (port 5000)..."
-    cd "$ROOT_DIR"
-    python -m converter.main &
+    cd "$BACKEND_DIR"
+    python -m app.main &
     BACKEND_PID=$!
 
     info "启动前端开发服务器 (port 8080)..."

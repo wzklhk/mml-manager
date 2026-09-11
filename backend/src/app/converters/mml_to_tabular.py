@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from .mml_to_sql import parse_mml_file
 from ..utils.sort import sort_configs
 from ..utils.io_handler import print_statistics
-from tabular import write_excel, write_csvs
+from ..utils.tabular import write_excel, write_csvs
 from ..utils.table import MmlConfig
 
 

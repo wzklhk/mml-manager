@@ -9,7 +9,7 @@ export default defineConfig(({ command }) => ({
   base: command === "serve" ? "/" : "/static/",
 
   build: {
-    outDir: resolve(__dirname, "../converter/static"),
+    outDir: resolve(__dirname, "../backend/src/app/static"),
     emptyOutDir: true,
   },
 

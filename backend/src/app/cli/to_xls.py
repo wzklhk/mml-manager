@@ -5,14 +5,11 @@ CLI: MML → Excel/CSV 转换
 """
 
 import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
 
 from ..converters.mml_to_xls import convert_file_to_excel_and_csv
-from cli.utils import ensure_input_file, add_common_args
+from .utils import ensure_input_file, add_common_args
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -5,14 +5,11 @@ CLI: MML → SQL 转换
 """
 
 import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
 
 from ..converters.mml_to_sql import convert_file_to_sql, list_commands_in_file
-from cli.utils import ensure_input_file, resolve_output_path, add_common_args
+from .utils import ensure_input_file, resolve_output_path, add_common_args
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -1,7 +1,0 @@
-# Build artifacts
-static/
-*.pyc
-__pycache__/
-.venv/
-mml_config.db
-.pytest_cache/
