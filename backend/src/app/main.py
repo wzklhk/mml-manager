@@ -46,9 +46,7 @@ def create_app() -> FastAPI:
 def serve_index():
     index_path = STATIC_DIR / "index.html"
     return (
-        FileResponse(index_path)
-        if index_path.is_file()
-        else JSONResponse({"error": "前端尚未构建"}, status_code=404)
+        FileResponse(index_path) if index_path.is_file() else JSONResponse({"error": "前端尚未构建"}, status_code=404)
     )
 
 
