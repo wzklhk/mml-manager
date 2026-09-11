@@ -4,8 +4,7 @@ from converter.services import mml as mml_service
 def test_import_view_edit_and_export_use_memory(tmp_path):
     source = tmp_path / "config.txt"
     source.write_text(
-        "ADD USER PROFILE:ID=2,NAME='Jane Doe';\n"
-        "SET USER PROFILE:ID=1,NAME=Admin;\n",
+        "ADD USER PROFILE:ID=2,NAME='Jane Doe';\n" "SET USER PROFILE:ID=1,NAME=Admin;\n",
         encoding="utf-8",
     )
 
@@ -45,6 +44,4 @@ def test_each_import_is_retained_and_can_be_activated(tmp_path):
 
 def test_table_summary_is_sorted_by_command_name():
     mml_service.import_mml_text("SET ZEBRA:ID=1; SET alpha:ID=2; SET Middle:ID=3;", "sorted.mml")
-    assert [table["table_name"] for table in mml_service.get_tables_summary()] == [
-        "alpha", "Middle", "ZEBRA"
-    ]
+    assert [table["table_name"] for table in mml_service.get_tables_summary()] == ["alpha", "Middle", "ZEBRA"]

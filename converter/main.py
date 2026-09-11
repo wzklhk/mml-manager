@@ -46,8 +46,10 @@ def create_app() -> FastAPI:
 @frontend.get("/")
 def serve_index():
     index_path = os.path.join(STATIC_DIR, "index.html")
-    return FileResponse(index_path) if os.path.isfile(index_path) else JSONResponse(
-        {"error": "前端尚未构建"}, status_code=404
+    return (
+        FileResponse(index_path)
+        if os.path.isfile(index_path)
+        else JSONResponse({"error": "前端尚未构建"}, status_code=404)
     )
 
 
@@ -68,8 +70,12 @@ app = create_app()
 def run() -> None:
     """Run the development server using repository configuration."""
     settings = load_config()
-    uvicorn.run("converter.main:app", host=settings["server"]["host"], port=settings["server"]["port"],
-                reload=settings["server"]["debug"])
+    uvicorn.run(
+        "converter.main:app",
+        host=settings["server"]["host"],
+        port=settings["server"]["port"],
+        reload=settings["server"]["debug"],
+    )
 
 
 if __name__ == "__main__":

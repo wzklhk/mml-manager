@@ -18,7 +18,7 @@
       v-loading="uploading"
       element-loading-text=" importing..."
       element-loading-spinner="el-icon-loading"
-      style="flex: 1; overflow: hidden;"
+      style="flex: 1; overflow: hidden"
     >
       <Sidebar
         :selected-table="selectedTable"
@@ -115,7 +115,7 @@ export default {
       editForm: {},
       sort: { prop: null, order: null },
       uploading: false,
-      compareDialogVisible: false
+      compareDialogVisible: false,
     }
   },
   computed: {
@@ -125,12 +125,12 @@ export default {
     filteredTables() {
       if (!this.tableSearch) return this.tables
       const q = this.tableSearch.toLowerCase()
-      return this.tables.filter(t => t.table_name.toLowerCase().includes(q))
+      return this.tables.filter((t) => t.table_name.toLowerCase().includes(q))
     },
     pagedTables() {
       const start = (this.tablePagination.page - 1) * this.tablePagination.pageSize
       return this.filteredTables.slice(start, start + this.tablePagination.pageSize)
-    }
+    },
   },
   watch: {
     tableSearch() {
@@ -139,12 +139,11 @@ export default {
     },
     filteredTables() {
       this.syncTablePagination()
-    }
+    },
   },
   mounted() {
     this.loadSnapshots()
     this.loadTables()
-
   },
   activated() {
     this.$nextTick(() => this.setupFooterObserver())
@@ -161,8 +160,10 @@ export default {
       const sentinel = this.$refs.footerSentinel
       if (!sentinel) return
       this.footerObserver = new IntersectionObserver(
-        (entries) => { this.showFooter = entries[0].isIntersecting },
-        { root: null, threshold: 0 }
+        (entries) => {
+          this.showFooter = entries[0].isIntersecting
+        },
+        { root: null, threshold: 0 },
       )
       this.footerObserver.observe(sentinel)
     },
@@ -174,7 +175,8 @@ export default {
       if (!prop || !order) return
       const dir = order === 'ascending' ? 'asc' : 'desc'
       this.tables.sort((a, b) => {
-        let va = a[prop], vb = b[prop]
+        let va = a[prop],
+          vb = b[prop]
         if (typeof va === 'string') va = va.toLowerCase()
         if (typeof vb === 'string') vb = vb.toLowerCase()
         if (va < vb) return dir === 'asc' ? -1 : 1
@@ -197,7 +199,9 @@ export default {
       this.syncTablePagination()
     },
 
-    handleSelectionChange(rows) { this.selectedRows = rows },
+    handleSelectionChange(rows) {
+      this.selectedRows = rows
+    },
 
     async loadSnapshots() {
       try {
@@ -263,7 +267,7 @@ export default {
         const params = {
           page: this.pagination.page,
           page_size: this.pagination.pageSize,
-          table_name: this.selectedTable
+          table_name: this.selectedTable,
         }
         if (this.sort.prop) {
           params.sort_by = this.sort.prop
@@ -315,28 +319,30 @@ export default {
     async batchDelete() {
       if (!this.selectedRows.length) return
       const count = this.selectedRows.length
-      this.$confirm(
-        this.$t('confirm.batch_delete_content', { count }),
-        this.$t('confirm.batch_delete_title'),
-        { confirmButtonText: this.$t('confirm.btn_confirm'), cancelButtonText: this.$t('confirm.btn_cancel'), type: 'warning' }
-      ).then(async () => {
-        try {
-          const ids = this.selectedRows.map(r => r.id)
-          await axios.post('/api/configs/batch-delete', { table_name: this.selectedTable, ids })
-          this.$message.success(this.$t('msg.batch_delete_success', { count: ids.length }))
-          this.selectedRows = []
-          this.loadConfigs()
-          this.loadTables()
-        } catch (e) {
-          this.$message.error(this.$t('msg.batch_delete_fail', { msg: e.response?.data?.error || e.message }))
-        }
-      }).catch(() => {})
+      this.$confirm(this.$t('confirm.batch_delete_content', { count }), this.$t('confirm.batch_delete_title'), {
+        confirmButtonText: this.$t('confirm.btn_confirm'),
+        cancelButtonText: this.$t('confirm.btn_cancel'),
+        type: 'warning',
+      })
+        .then(async () => {
+          try {
+            const ids = this.selectedRows.map((r) => r.id)
+            await axios.post('/api/configs/batch-delete', { table_name: this.selectedTable, ids })
+            this.$message.success(this.$t('msg.batch_delete_success', { count: ids.length }))
+            this.selectedRows = []
+            this.loadConfigs()
+            this.loadTables()
+          } catch (e) {
+            this.$message.error(this.$t('msg.batch_delete_fail', { msg: e.response?.data?.error || e.message }))
+          }
+        })
+        .catch(() => {})
     },
 
     async batchExport() {
       if (!this.selectedRows.length) return
       try {
-        const ids = this.selectedRows.map(r => r.id)
+        const ids = this.selectedRows.map((r) => r.id)
         const res = await axios.post('/api/export-mml', { table_name: this.selectedTable, ids })
         const blob = new Blob([res.data.content], { type: 'text/plain' })
         const url = window.URL.createObjectURL(blob)
@@ -354,7 +360,9 @@ export default {
     showAddRowDialog() {
       this.isNewRow = true
       this.editForm = {}
-      this.currentColumns.forEach(col => { this.editForm[col] = '' })
+      this.currentColumns.forEach((col) => {
+        this.editForm[col] = ''
+      })
       this.editDialogVisible = true
     },
 
@@ -367,12 +375,17 @@ export default {
     async saveEdit() {
       try {
         const configData = {}
-        this.currentColumns.forEach(col => { configData[col] = this.editForm[col] || '' })
+        this.currentColumns.forEach((col) => {
+          configData[col] = this.editForm[col] || ''
+        })
         if (this.isNewRow) {
           await axios.post('/api/configs', { table_name: this.selectedTable, config_data: configData })
           this.$message.success(this.$t('msg.add_success'))
         } else {
-          await axios.put(`/api/configs/${this.editForm._id}`, { table_name: this.selectedTable, config_data: configData })
+          await axios.put(`/api/configs/${this.editForm._id}`, {
+            table_name: this.selectedTable,
+            config_data: configData,
+          })
           this.$message.success(this.$t('msg.save_success'))
         }
         this.editDialogVisible = false
@@ -384,20 +397,22 @@ export default {
     },
 
     handleDelete(row) {
-      this.$confirm(
-        this.$t('confirm.delete_content'),
-        this.$t('confirm.delete_title'),
-        { confirmButtonText: this.$t('confirm.btn_confirm'), cancelButtonText: this.$t('confirm.btn_cancel'), type: 'warning' }
-      ).then(async () => {
-        try {
-          await axios.delete(`/api/configs/${row.id}`, { params: { table_name: this.selectedTable } })
-          this.$message.success(this.$t('msg.delete_success'))
-          this.loadConfigs()
-        } catch (e) {
-          this.$message.error(this.$t('msg.delete_fail', { msg: e.message }))
-        }
-      }).catch(() => {})
-    }
-  }
+      this.$confirm(this.$t('confirm.delete_content'), this.$t('confirm.delete_title'), {
+        confirmButtonText: this.$t('confirm.btn_confirm'),
+        cancelButtonText: this.$t('confirm.btn_cancel'),
+        type: 'warning',
+      })
+        .then(async () => {
+          try {
+            await axios.delete(`/api/configs/${row.id}`, { params: { table_name: this.selectedTable } })
+            this.$message.success(this.$t('msg.delete_success'))
+            this.loadConfigs()
+          } catch (e) {
+            this.$message.error(this.$t('msg.delete_fail', { msg: e.message }))
+          }
+        })
+        .catch(() => {})
+    },
+  },
 }
 </script>

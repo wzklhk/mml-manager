@@ -1,5 +1,6 @@
 [tool.black]
 line-length = 120
+target-version = ["py310"]
 
 [project]
 name = "mml-manager"
@@ -20,6 +21,10 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=7.0.0"]
+dev = [
+    "black==25.1.0",
+    "pytest>=7.0.0",
+]
 
 [project.scripts]
 mml-manager = "converter.main:run"

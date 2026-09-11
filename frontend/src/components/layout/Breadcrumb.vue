@@ -10,7 +10,9 @@ const currentModule = computed(() => getModule(route.meta.moduleId))
 <template>
   <el-breadcrumb separator="/" class="workspace-breadcrumb">
     <el-breadcrumb-item :to="{ path: '/' }">{{ t('workspace.homepage') }}</el-breadcrumb-item>
-    <el-breadcrumb-item v-if="currentModule" :to="{ path: currentModule.path }">{{ t(currentModule.name) }}</el-breadcrumb-item>
+    <el-breadcrumb-item v-if="currentModule" :to="{ path: currentModule.path }">{{
+      t(currentModule.name)
+    }}</el-breadcrumb-item>
     <el-breadcrumb-item>{{ t(route.meta.title || 'workspace.home') }}</el-breadcrumb-item>
   </el-breadcrumb>
 </template>

@@ -11,7 +11,7 @@ watchEffect(() => {
   document.title = t(route.meta.title || 'workspace.home') + ' · mml-manager'
   document.documentElement.lang = locale.value === 'zh' ? 'zh-CN' : 'en'
 })
-const elementLocale = computed(() => locale.value === 'zh' ? zhCn : en)
+const elementLocale = computed(() => (locale.value === 'zh' ? zhCn : en))
 const isDark = ref(document.documentElement.classList.contains('dark'))
 let themeTransitionTimer
 

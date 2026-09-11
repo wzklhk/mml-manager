@@ -22,12 +22,16 @@ class MemoryConfigStore:
                 columns = sorted({key for command in commands for key in command["values"]})
                 rows = []
                 for command in commands:
-                    rows.append({"id": self._next_row_id, "cmd_type": command["cmd_type"],
-                                 "values": dict(command["values"])})
+                    rows.append(
+                        {"id": self._next_row_id, "cmd_type": command["cmd_type"], "values": dict(command["values"])}
+                    )
                     self._next_row_id += 1
                 snapshot_tables[table_name] = {"columns": columns, "rows": rows}
             self._snapshots[snapshot_id] = {
-                "id": snapshot_id, "name": name, "loaded_at": loaded_at, "tables": snapshot_tables
+                "id": snapshot_id,
+                "name": name,
+                "loaded_at": loaded_at,
+                "tables": snapshot_tables,
             }
             self._active_id = snapshot_id
             return self._metadata(self._snapshots[snapshot_id])
@@ -91,10 +95,13 @@ class MemoryConfigStore:
 
     @staticmethod
     def _metadata(snapshot):
-        return {"id": snapshot["id"], "name": snapshot["name"],
-                "loaded_at": snapshot["loaded_at"],
-                "table_count": len(snapshot["tables"]),
-                "command_count": sum(len(table["rows"]) for table in snapshot["tables"].values())}
+        return {
+            "id": snapshot["id"],
+            "name": snapshot["name"],
+            "loaded_at": snapshot["loaded_at"],
+            "table_count": len(snapshot["tables"]),
+            "command_count": sum(len(table["rows"]) for table in snapshot["tables"].values()),
+        }
 
 
 store = MemoryConfigStore()

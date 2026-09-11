@@ -97,8 +97,11 @@ def activate_snapshot(snapshot_id: str):
 
 @api.get("/configs")
 def get_configs(
-    table_name: str = "", page: int = Query(default=1), page_size: int = Query(default=20),
-    sort_by: str | None = None, sort_order: str = "asc",
+    table_name: str = "",
+    page: int = Query(default=1),
+    page_size: int = Query(default=20),
+    sort_by: str | None = None,
+    sort_order: str = "asc",
 ):
     try:
         table_name = table_name.strip()
@@ -108,8 +111,14 @@ def get_configs(
             table["table_name"]: {"count": table["count"], "columns": table["columns"]}
             for table in mml_service.get_tables_summary()
         }
-        return {"tables_summary": summary, "configs": [], "total": 0, "page": 1,
-                "page_size": page_size, "total_pages": 1}
+        return {
+            "tables_summary": summary,
+            "configs": [],
+            "total": 0,
+            "page": 1,
+            "page_size": page_size,
+            "total_pages": 1,
+        }
     except ValueError as exc:
         return _error(str(exc), 404)
     except Exception as exc:
@@ -124,7 +133,9 @@ def add_config(data: dict[str, Any] | None = None):
     if not table_name or not config_data:
         return _error("需要 table_name 和 config_data", 400)
     try:
-        return JSONResponse({"message": "新增成功", "id": mml_service.add_config(table_name, config_data)}, status_code=201)
+        return JSONResponse(
+            {"message": "新增成功", "id": mml_service.add_config(table_name, config_data)}, status_code=201
+        )
     except ValueError as exc:
         return _error(str(exc), 404)
     except Exception as exc:

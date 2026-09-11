@@ -54,7 +54,8 @@ def init_db(db_path: str = None) -> str:
     """初始化数据库：创建元数据表"""
     path = db_path or get_db_path()
     with DatabaseConnection(db_path=path) as db:
-        db.execute("""
+        db.execute(
+            """
             CREATE TABLE IF NOT EXISTS _mml_meta (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 table_name TEXT NOT NULL UNIQUE,
@@ -62,7 +63,8 @@ def init_db(db_path: str = None) -> str:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
     return f"[OK] 数据库已初始化: {get_db_path()}"
 
 
@@ -122,8 +124,7 @@ def ensure_columns(table_name: str, required_columns: List[str]) -> List[str]:
                 col_type = infer_column_type(col)
                 try:
                     db.execute(
-                        f"ALTER TABLE {quote_identifier(table_name)} "
-                        f"ADD COLUMN {quote_identifier(col)} {col_type}"
+                        f"ALTER TABLE {quote_identifier(table_name)} " f"ADD COLUMN {quote_identifier(col)} {col_type}"
                     )
                 except Exception as e:
                     print(f"[WARN] 添加列 {table_name}.{col} 失败: {e}")
@@ -190,9 +191,7 @@ def delete_rows(table_name: str, rowids: List[int]) -> int:
         return 0
     placeholders = ",".join(["?"] * len(rowids))
     with DatabaseConnection() as db:
-        cursor = db.execute(
-            f"DELETE FROM {quote_identifier(table_name)} WHERE rowid IN ({placeholders})", rowids
-        )
+        cursor = db.execute(f"DELETE FROM {quote_identifier(table_name)} WHERE rowid IN ({placeholders})", rowids)
         return cursor.rowcount
 
 
@@ -223,14 +222,12 @@ def query_rows(
 
     with DatabaseConnection() as db:
         # 总行数
-        total = db.execute(
-            f"SELECT COUNT(*) as cnt FROM {quote_identifier(table_name)}"
-        ).fetchone()["cnt"]
+        total = db.execute(f"SELECT COUNT(*) as cnt FROM {quote_identifier(table_name)}").fetchone()["cnt"]
 
         # 分页数据
         cursor = db.execute(
-            f"SELECT rowid, {cols_str} FROM {quote_identifier(table_name)} "
-            f"{order_clause} LIMIT ? OFFSET ?", (page_size, offset)
+            f"SELECT rowid, {cols_str} FROM {quote_identifier(table_name)} " f"{order_clause} LIMIT ? OFFSET ?",
+            (page_size, offset),
         )
         rows = []
         for row in cursor.fetchall():
@@ -252,9 +249,7 @@ def query_row(table_name: str, rowid: int, columns: List[str]) -> Optional[Dict]
     cols_str = ", ".join(cols_quoted)
 
     with DatabaseConnection() as db:
-        cursor = db.execute(
-            f"SELECT rowid, {cols_str} FROM {quote_identifier(table_name)} WHERE rowid = ?", (rowid,)
-        )
+        cursor = db.execute(f"SELECT rowid, {cols_str} FROM {quote_identifier(table_name)} WHERE rowid = ?", (rowid,))
         row = cursor.fetchone()
         if not row:
             return None
@@ -274,9 +269,7 @@ def query_all_rows(table_name: str, columns: List[str], sort_by: str = None) -> 
 
     with DatabaseConnection() as db:
         order_clause = f"{quote_identifier(sort_by)}, rowid" if sort_by in columns else "rowid"
-        cursor = db.execute(
-            f"SELECT {cols_str} FROM {quote_identifier(table_name)} ORDER BY {order_clause}"
-        )
+        cursor = db.execute(f"SELECT {cols_str} FROM {quote_identifier(table_name)} ORDER BY {order_clause}")
         return [dict(row) for row in cursor.fetchall()]
 
 
@@ -291,6 +284,7 @@ def query_rows_by_ids(table_name: str, rowids: List[int], columns: List[str]) ->
     with DatabaseConnection() as db:
         cursor = db.execute(
             f"SELECT rowid, {cols_str} FROM {quote_identifier(table_name)} "
-            f"WHERE rowid IN ({placeholders}) ORDER BY rowid", rowids
+            f"WHERE rowid IN ({placeholders}) ORDER BY rowid",
+            rowids,
         )
         return [dict(row) for row in cursor.fetchall()]

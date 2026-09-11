@@ -15,7 +15,14 @@ from .memory_store import store
 
 
 KEY_FIELD_CANDIDATES = (
-    "ID", "INDEX", "SEQ", "SEQUENCE", "NAME", "MOID", "DN", "OBJECTID",
+    "ID",
+    "INDEX",
+    "SEQ",
+    "SEQUENCE",
+    "NAME",
+    "MOID",
+    "DN",
+    "OBJECTID",
 )
 
 
@@ -51,7 +58,11 @@ def _choose_key_fields(before: List[Dict], after: List[Dict]) -> List[str]:
     for field in candidates:
         before_keys = [str(item["values"].get(field, "")) for item in before]
         after_keys = [str(item["values"].get(field, "")) for item in after]
-        if all(before_keys + after_keys) and len(before_keys) == len(set(before_keys)) and len(after_keys) == len(set(after_keys)):
+        if (
+            all(before_keys + after_keys)
+            and len(before_keys) == len(set(before_keys))
+            and len(after_keys) == len(set(after_keys))
+        ):
             return [field]
     return []
 
@@ -85,8 +96,10 @@ def compare_mml_texts(baseline_text: str, target_text: str) -> Dict:
         else:
             # 无稳定主键时仍可准确识别完全相同、新增和删除，避免错误地配对为“修改”。
             warning = "未发现唯一标识字段，无法判定字段级修改；差异按完整配置行识别"
+
             def canonical(item):
                 return json.dumps(item["values"], ensure_ascii=False, sort_keys=True)
+
             before_map = {canonical(item): item["values"] for item in before}
             after_map = {canonical(item): item["values"] for item in after}
 
@@ -111,18 +124,20 @@ def compare_mml_texts(baseline_text: str, target_text: str) -> Dict:
             if status != "unchanged":
                 diffs.append({"key": key, "status": status, "before": old, "after": new, "changes": changes})
 
-        table_results.append({
-            "table_name": table_name,
-            "key_fields": key_fields,
-            "baseline_count": len(before),
-            "target_count": len(after),
-            "warning": warning,
-            "diffs": diffs,
-            "summary": {
-                status: sum(1 for diff in diffs if diff["status"] == status)
-                for status in ("added", "removed", "modified")
-            },
-        })
+        table_results.append(
+            {
+                "table_name": table_name,
+                "key_fields": key_fields,
+                "baseline_count": len(before),
+                "target_count": len(after),
+                "warning": warning,
+                "diffs": diffs,
+                "summary": {
+                    status: sum(1 for diff in diffs if diff["status"] == status)
+                    for status in ("added", "removed", "modified")
+                },
+            }
+        )
     return {"summary": totals, "tables": table_results}
 
 
@@ -157,9 +172,10 @@ def activate_snapshot(snapshot_id: str) -> Dict:
 
 def get_tables_summary() -> List[Dict]:
     tables, loaded_at = store.snapshot()
-    return [{"table_name": name, "columns": table["columns"], "count": len(table["rows"]),
-             "created_at": loaded_at or ""}
-            for name, table in sorted(tables.items(), key=lambda item: item[0].casefold())]
+    return [
+        {"table_name": name, "columns": table["columns"], "count": len(table["rows"]), "created_at": loaded_at or ""}
+        for name, table in sorted(tables.items(), key=lambda item: item[0].casefold())
+    ]
 
 
 def get_configs(
@@ -184,6 +200,7 @@ def get_configs(
         sort_by = next((field for field in KEY_FIELD_CANDIDATES if field in columns), None)
     rows = table["rows"]
     if sort_by in columns:
+
         def sort_value(row):
             value = row["values"].get(sort_by)
             try:
@@ -191,14 +208,20 @@ def get_configs(
             except (TypeError, ValueError):
                 return value is None, 1, str(value or "").casefold()
 
-        rows.sort(key=sort_value,
-                  reverse=sort_order.lower() == "desc")
+        rows.sort(key=sort_value, reverse=sort_order.lower() == "desc")
     total = len(rows)
     start = max(0, (page - 1) * page_size)
-    configs = [{"id": row["id"], "table_name": table_name, "cmd_type": row["cmd_type"],
-                "config_data": {column: row["values"].get(column) for column in columns},
-                "created_at": loaded_at or "", "updated_at": loaded_at or ""}
-               for row in rows[start:start + page_size]]
+    configs = [
+        {
+            "id": row["id"],
+            "table_name": table_name,
+            "cmd_type": row["cmd_type"],
+            "config_data": {column: row["values"].get(column) for column in columns},
+            "created_at": loaded_at or "",
+            "updated_at": loaded_at or "",
+        }
+        for row in rows[start : start + page_size]
+    ]
     total_pages = max(1, (total + page_size - 1) // page_size)
     return {
         "configs": configs,
@@ -215,9 +238,18 @@ def get_config(table_name: str, config_id: int) -> Optional[Dict]:
         raise ValueError(f"表 {table_name} 不存在")
     table = tables[table_name]
     row = next((item for item in table["rows"] if item["id"] == config_id), None)
-    return None if row is None else {"id": row["id"], "table_name": table_name,
-        "cmd_type": row["cmd_type"], "config_data": row["values"],
-        "created_at": loaded_at or "", "updated_at": loaded_at or ""}
+    return (
+        None
+        if row is None
+        else {
+            "id": row["id"],
+            "table_name": table_name,
+            "cmd_type": row["cmd_type"],
+            "config_data": row["values"],
+            "created_at": loaded_at or "",
+            "updated_at": loaded_at or "",
+        }
+    )
 
 
 def add_config(table_name: str, config_data: Dict) -> int:

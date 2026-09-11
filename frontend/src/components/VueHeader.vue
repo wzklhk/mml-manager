@@ -15,7 +15,6 @@
       <span v-if="selectedTable" class="selected-table-name">{{ selectedTable }}</span>
     </div>
     <div class="header-right">
-
       <el-button size="default" @click="$emit('compare')">{{ $t('header.compare_mml') }}</el-button>
       <el-upload
         class="header-upload"
@@ -41,18 +40,18 @@ export default {
     menuActive: { type: String, default: 'overview' },
     selectedTable: { type: String, default: '' },
     snapshots: { type: Array, default: () => [] },
-    activeSnapshotId: { type: String, default: '' }
+    activeSnapshotId: { type: String, default: '' },
   },
   methods: {
     beforeUpload(file) {
-      if (!['.mml', '.txt'].some(ext => file.name.toLowerCase().endsWith(ext))) {
+      if (!['.mml', '.txt'].some((ext) => file.name.toLowerCase().endsWith(ext))) {
         this.$message.error(this.$t('header.only_mml_file'))
         return false
       }
       this.$emit('upload-start')
       return true
-    }
-  }
+    },
+  },
 }
 </script>
 
@@ -70,9 +69,30 @@ export default {
   background: var(--header-bg);
   border-bottom: 1px solid var(--border-color);
 }
-.header-left, .header-right { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.header-right { margin-left: auto; }
-.selected-table-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--text-secondary); }
-.snapshot-select { width: 220px; max-width: 100%; }
-.header-upload { display: inline-flex; }
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.header-right {
+  margin-left: auto;
+}
+.selected-table-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.snapshot-select {
+  width: 220px;
+  max-width: 100%;
+}
+.header-upload {
+  display: inline-flex;
+}
 </style>

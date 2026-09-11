@@ -10,7 +10,7 @@ export default defineConfig(({ command }) => ({
 
   build: {
     outDir: resolve(__dirname, '../converter/static'),
-    emptyOutDir: true
+    emptyOutDir: true,
   },
 
   server: {
@@ -18,8 +18,8 @@ export default defineConfig(({ command }) => ({
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
-        changeOrigin: true
-      }
-    }
-  }
+        changeOrigin: true,
+      },
+    },
+  },
 }))

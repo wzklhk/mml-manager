@@ -13,8 +13,8 @@ const i18n = createI18n({
   locale: loadLocale(),
   fallbackLocale: 'en',
   messages: { en, zh },
-  legacy: false,  // 使用 Composition API 模式
-  globalInjection: true  // 允许模板中直接使用 $t
+  legacy: false, // 使用 Composition API 模式
+  globalInjection: true, // 允许模板中直接使用 $t
 })
 
 export default i18n

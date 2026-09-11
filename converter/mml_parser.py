@@ -26,7 +26,7 @@ def split_commands(text: str) -> Iterable[str]:
             elif char in ("'", '"'):
                 quote = char
             elif char == ";":
-                yield text[start:index + 1].strip()
+                yield text[start : index + 1].strip()
                 position = index + 1
                 break
             index += 1

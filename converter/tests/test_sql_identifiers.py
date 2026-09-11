@@ -22,11 +22,7 @@ def test_generated_sql_supports_table_names_with_spaces():
 
 
 def test_complete_sql_script_quotes_dynamic_table_names():
-    configs = {
-        "NAT SWITCH": [
-            {"cmd_type": "SET", "table": "NAT SWITCH", "values": {"NATSWITCH": "ON"}}
-        ]
-    }
+    configs = {"NAT SWITCH": [{"cmd_type": "SET", "table": "NAT SWITCH", "values": {"NATSWITCH": "ON"}}]}
     statements = generate_sql_script(configs, {"NAT SWITCH": {"NATSWITCH"}})
 
     db = sqlite3.connect(":memory:")
@@ -38,8 +34,7 @@ def test_complete_sql_script_quotes_dynamic_table_names():
 def test_mml_import_loads_commands_with_space_in_their_names_into_memory(tmp_path):
     source_path = tmp_path / "commands.txt"
     source_path.write_text(
-        "SET NAT SWITCH:NATSWITCH=ON;\n"
-        "SET SFTP SERVER USER:NFSNAME=node-1,USERNAME=admin;\n",
+        "SET NAT SWITCH:NATSWITCH=ON;\n" "SET SFTP SERVER USER:NFSNAME=node-1,USERNAME=admin;\n",
         encoding="utf-8",
     )
     result = import_mml_file(str(source_path))
