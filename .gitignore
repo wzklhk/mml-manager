@@ -255,3 +255,6 @@ temp_*.mml
 data/*
 !data/.gitkeep
 backend/src/app/static/
+
+# Local Codex repository instructions
+AGENTS.md
