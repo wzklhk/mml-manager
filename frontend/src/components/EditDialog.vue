@@ -1,8 +1,8 @@
 <template>
-  <el-dialog
+  <el-dialog class="mml-ui"
     :title="isNewRow ? $t('dialog.add_row') : $t('dialog.edit_config')"
     v-model="dialogVisible"
-    width="520px"
+    width="min(520px, 92vw)"
     :close-on-click-modal="false"
     top="8vh"
   >
@@ -13,7 +13,7 @@
     </el-form>
     <template #footer>
       <el-button @click="close">{{ $t('dialog.cancel') }}</el-button>
-      <el-button type="success" @click="save">{{ isNewRow ? $t('dialog.add') : $t('dialog.save') }}</el-button>
+      <el-button type="primary" @click="save">{{ isNewRow ? $t('dialog.add') : $t('dialog.save') }}</el-button>
     </template>
   </el-dialog>
 </template>

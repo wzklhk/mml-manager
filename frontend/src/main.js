@@ -7,6 +7,7 @@ import router from './router'
 import './styles/workspace.css'
 import i18n from './i18n'
 import './styles/theme.css'
+import './styles/mml.css'
 
 const savedTheme = localStorage.getItem('theme')
 const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches

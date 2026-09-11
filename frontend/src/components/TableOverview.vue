@@ -6,21 +6,20 @@
     </div>
 
     <el-card shadow="never" class="filter-card">
-      <el-row :gutter="16" type="flex" align="middle">
-        <el-col :span="8">
+      <div class="mml-toolbar">
+        <div class="mml-search">
           <el-input
             :model-value="modelValue"
             @update:model-value="$emit('update:modelValue', $event)"
             :placeholder="$t('overview.search_placeholder')"
-            prefix-icon="el-icon-search"
             clearable
             size="default"
           />
-        </el-col>
-        <el-col :span="16" style="text-align: right;">
-          <el-button icon="el-icon-refresh" size="small" @click="$emit('refresh')">{{ $t('overview.refresh') }}</el-button>
-        </el-col>
-      </el-row>
+        </div>
+        <div class="mml-actions">
+          <el-button  @click="$emit('refresh')">{{ $t('overview.refresh') }}</el-button>
+        </div>
+      </div>
     </el-card>
 
     <el-card shadow="never" class="data-card">
@@ -40,9 +39,9 @@
         </el-table-column>
         <el-table-column :label="$t('overview.row_count')" prop="count" width="100" sortable="custom" align="center" />
         <el-table-column :label="$t('overview.created_at')" prop="created_at" width="180" sortable="custom" />
-        <el-table-column :label="$t('overview.actions')" width="100" align="center">
+        <el-table-column :label="$t('overview.actions')" width="112" align="right" fixed="right">
           <template #default="scope">
-            <el-button size="small" type="primary" plain @click="$emit('enter-table', scope.row)">{{ $t('overview.view') }}</el-button>
+            <el-button size="small"  @click="$emit('enter-table', scope.row)">{{ $t('overview.view') }}</el-button>
           </template>
         </el-table-column>
       </el-table>

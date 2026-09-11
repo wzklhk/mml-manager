@@ -1,5 +1,5 @@
 <template>
-  <div class="mml-query">
+  <div class="mml-query mml-ui">
     <VueHeader
       :menu-active="menuActive"
       :selected-table="selectedTable"
