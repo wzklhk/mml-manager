@@ -22,22 +22,27 @@
     >
       <Sidebar
         :selected-table="selectedTable"
-        :tables="tables"
+        :tables="pagedTables"
+        :table-pagination="tablePagination"
         :columns="currentColumns"
         :total-rows="pagination.total"
         :collapsed="sidebarCollapsed"
         @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed"
         @select-table="enterTable"
+        @table-page-change="handleTablePageChange"
       />
 
       <el-main class="vue-main">
         <TableOverview
           v-show="!selectedTable"
           v-model="tableSearch"
-          :tables="filteredTables"
+          :tables="pagedTables"
+          :pagination="tablePagination"
           @enter-table="enterTable"
           @refresh="loadTables"
           @sort="handleOverviewSort"
+          @page-change="handleTablePageChange"
+          @size-change="handleTableSizeChange"
         />
 
         <TableDetail
@@ -104,6 +109,7 @@ export default {
       footerObserver: null,
       sidebarCollapsed: false,
       pagination: { page: 1, pageSize: 20, total: 0 },
+      tablePagination: { page: 1, pageSize: 20, total: 0 },
       editDialogVisible: false,
       isNewRow: false,
       editForm: {},
@@ -120,6 +126,19 @@ export default {
       if (!this.tableSearch) return this.tables
       const q = this.tableSearch.toLowerCase()
       return this.tables.filter(t => t.table_name.toLowerCase().includes(q))
+    },
+    pagedTables() {
+      const start = (this.tablePagination.page - 1) * this.tablePagination.pageSize
+      return this.filteredTables.slice(start, start + this.tablePagination.pageSize)
+    }
+  },
+  watch: {
+    tableSearch() {
+      this.tablePagination.page = 1
+      this.syncTablePagination()
+    },
+    filteredTables() {
+      this.syncTablePagination()
     }
   },
   mounted() {
@@ -164,6 +183,20 @@ export default {
       })
     },
 
+    syncTablePagination() {
+      this.tablePagination.total = this.filteredTables.length
+      const lastPage = Math.max(1, Math.ceil(this.tablePagination.total / this.tablePagination.pageSize))
+      if (this.tablePagination.page > lastPage) this.tablePagination.page = lastPage
+    },
+    handleTablePageChange(page) {
+      this.tablePagination.page = page
+    },
+    handleTableSizeChange(size) {
+      this.tablePagination.pageSize = size
+      this.tablePagination.page = 1
+      this.syncTablePagination()
+    },
+
     handleSelectionChange(rows) { this.selectedRows = rows },
 
     async loadSnapshots() {
@@ -192,6 +225,7 @@ export default {
       try {
         const res = await axios.get('/api/tables')
         this.tables = res.data.tables
+        this.syncTablePagination()
       } catch (e) {
         this.$message.error(this.$t('msg.load_tables_fail', { msg: e.message }))
       }

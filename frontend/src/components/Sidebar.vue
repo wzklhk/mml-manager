@@ -39,6 +39,18 @@
                 <el-tag size="small" type="success" effect="dark" class="table-item-count">{{ t.count }}</el-tag>
               </div>
             </div>
+            <el-pagination
+              v-if="tablePagination.total > tablePagination.pageSize"
+              class="aside-pagination"
+              small
+              background
+              layout="prev, pager, next"
+              :pager-count="5"
+              :current-page="tablePagination.page"
+              :page-size="tablePagination.pageSize"
+              :total="tablePagination.total"
+              @current-change="$emit('table-page-change', $event)"
+            />
           </div>
         </template>
 
@@ -86,6 +98,7 @@ export default {
     tables: { type: Array, default: () => [] },
     columns: { type: Array, default: () => [] },
     totalRows: { type: Number, default: 0 },
+    tablePagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },
     collapsed: { type: Boolean, default: false }
   }
 }
@@ -235,6 +248,7 @@ export default {
   height: 18px !important;
   line-height: 18px !important;
 }
+.aside-pagination { margin-top: 14px; justify-content: center; }
 
 .expand-trigger {
   position: absolute;

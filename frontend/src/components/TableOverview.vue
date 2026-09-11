@@ -45,6 +45,18 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="pagination-wrapper">
+        <el-pagination
+          background
+          layout="total, sizes, prev, pager, next"
+          :current-page="pagination.page"
+          :page-sizes="[10, 20, 50, 100]"
+          :page-size="pagination.pageSize"
+          :total="pagination.total"
+          @current-change="$emit('page-change', $event)"
+          @size-change="$emit('size-change', $event)"
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -54,7 +66,8 @@ export default {
   name: 'TableOverview',
   props: {
     tables: { type: Array, default: () => [] },
-    modelValue: { type: String, default: '' }
+    modelValue: { type: String, default: '' },
+    pagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) }
   },
   methods: {
     onSort({ prop, order }) {
@@ -83,4 +96,5 @@ export default {
 .col-tag {
   margin: 2px 3px; border: none; background: var(--tag-bg); color: var(--tag-color);
 }
+.pagination-wrapper { margin-top: 20px; display: flex; justify-content: flex-end; overflow-x: auto; }
 </style>
