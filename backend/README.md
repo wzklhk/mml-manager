@@ -5,3 +5,4 @@
 完整说明请参阅项目 Wiki：
 
 - [快速开始](https://github.com/wzklhk/mml-manager/wiki/Getting-Started)
+- [命令行转换](https://github.com/wzklhk/mml-manager/wiki/Command-Line-Conversion)

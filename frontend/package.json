@@ -11,7 +11,8 @@
     "format": "npm run format:vue && npm run format:python",
     "format:check": "npm run format:check:vue && npm run format:check:python",
     "format:vue": "prettier --write .",
-    "format:check:vue": "prettier --check .",
+    "format:check:vue": "npm run check:vue-order && prettier --check .",
+    "check:vue-order": "node scripts/check-vue-block-order.mjs",
     "format:python": "python -m black ../backend/src/app ../backend/tests",
     "format:check:python": "python -m black --check ../backend/src/app ../backend/tests"
   },

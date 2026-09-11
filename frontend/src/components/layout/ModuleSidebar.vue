@@ -1,11 +1,3 @@
-<script setup>
-import { useI18n } from "vue-i18n";
-const { t } = useI18n();
-import { computed, ref } from "vue";
-const props = defineProps({ module: { type: Object, required: true } });
-const collapsed = ref(false);
-const visibleMenu = computed(() => (props.module.menu || []).filter((item) => item.enabled));
-</script>
 <template>
   <aside class="module-sidebar" :class="{ collapsed }">
     <button
@@ -27,3 +19,12 @@ const visibleMenu = computed(() => (props.module.menu || []).filter((item) => it
     </template>
   </aside>
 </template>
+
+<script setup>
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+import { computed, ref } from "vue";
+const props = defineProps({ module: { type: Object, required: true } });
+const collapsed = ref(false);
+const visibleMenu = computed(() => (props.module.menu || []).filter((item) => item.enabled));
+</script>

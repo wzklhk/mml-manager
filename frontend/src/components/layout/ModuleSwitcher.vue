@@ -1,16 +1,3 @@
-<script setup>
-import { useI18n } from "vue-i18n";
-const { t } = useI18n();
-import { ref } from "vue";
-import { useRouter } from "vue-router";
-import { moduleGroups } from "../../modules/registry";
-const visible = ref(false);
-const router = useRouter();
-function navigate(path) {
-  visible.value = false;
-  router.push(path);
-}
-</script>
 <template>
   <el-popover
     v-model:visible="visible"
@@ -33,11 +20,7 @@ function navigate(path) {
       <section v-for="group in moduleGroups" :key="group.name" class="switcher-group">
         <h3>{{ t(group.name) }}</h3>
         <div class="switcher-grid">
-          <button
-            v-for="module in group.modules"
-            :key="module.id"
-            @click="navigate(module.path)"
-          >
+          <button v-for="module in group.modules" :key="module.id" @click="navigate(module.path)">
             <span>{{ t(module.name) }}</span>
           </button>
         </div>
@@ -45,3 +28,17 @@ function navigate(path) {
     </nav>
   </el-popover>
 </template>
+
+<script setup>
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { moduleGroups } from "../../modules/registry";
+const visible = ref(false);
+const router = useRouter();
+function navigate(path) {
+  visible.value = false;
+  router.push(path);
+}
+</script>

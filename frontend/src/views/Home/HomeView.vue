@@ -1,10 +1,3 @@
-<script setup>
-import { useI18n } from "vue-i18n";
-const { t } = useI18n();
-import { RouterLink } from "vue-router";
-import { enabledModules, moduleGroups } from "../../modules/registry";
-const enabledCount = enabledModules.length;
-</script>
 <template>
   <div class="workspace-home">
     <div class="home-intro">
@@ -38,3 +31,11 @@ const enabledCount = enabledModules.length;
     </section>
   </div>
 </template>
+
+<script setup>
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+import { RouterLink } from "vue-router";
+import { enabledModules, moduleGroups } from "../../modules/registry";
+const enabledCount = enabledModules.length;
+</script>

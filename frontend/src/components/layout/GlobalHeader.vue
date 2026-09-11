@@ -1,14 +1,3 @@
-<script setup>
-import { useI18n } from "vue-i18n";
-const { t } = useI18n();
-import { computed, inject } from "vue";
-import { useRoute } from "vue-router";
-import { getModule } from "../../modules/registry";
-import ModuleSwitcher from "./ModuleSwitcher.vue";
-const { isDark, toggleTheme, toggleLang } = inject("appearance");
-const route = useRoute();
-const currentName = computed(() => t(getModule(route.meta.moduleId)?.name || "workspace.home"));
-</script>
 <template>
   <header class="global-header">
     <RouterLink to="/" class="workspace-brand"><span class="brand-symbol">m</span>mml-manager</RouterLink>
@@ -67,6 +56,18 @@ const currentName = computed(() => t(getModule(route.meta.moduleId)?.name || "wo
     </div>
   </header>
 </template>
+
+<script setup>
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+import { computed, inject } from "vue";
+import { useRoute } from "vue-router";
+import { getModule } from "../../modules/registry";
+import ModuleSwitcher from "./ModuleSwitcher.vue";
+const { isDark, toggleTheme, toggleLang } = inject("appearance");
+const route = useRoute();
+const currentName = computed(() => t(getModule(route.meta.moduleId)?.name || "workspace.home"));
+</script>
 
 <style scoped>
 /* ---- Icon-style buttons ---- */

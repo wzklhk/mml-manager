@@ -1,3 +1,11 @@
+<template>
+  <el-config-provider :locale="elementLocale">
+    <RouterView v-slot="{ Component }">
+      <KeepAlive><component :is="Component" /></KeepAlive>
+    </RouterView>
+  </el-config-provider>
+</template>
+
 <script setup>
 import { computed, onBeforeUnmount, provide, readonly, ref, watchEffect } from "vue";
 import { useRoute } from "vue-router";
@@ -40,11 +48,3 @@ onBeforeUnmount(() => {
   document.documentElement.classList.remove("theme-transitioning");
 });
 </script>
-
-<template>
-  <el-config-provider :locale="elementLocale">
-    <RouterView v-slot="{ Component }">
-      <KeepAlive><component :is="Component" /></KeepAlive>
-    </RouterView>
-  </el-config-provider>
-</template>

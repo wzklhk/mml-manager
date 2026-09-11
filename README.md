@@ -33,11 +33,52 @@ chmod +x scripts/run.sh
 
 更多启动方式、环境配置和 API 地址见 Wiki 的[快速开始](https://github.com/wzklhk/mml-manager/wiki/Getting-Started)。
 
+## 命令行转换
+
+后端命令行工具无需启动 Web 服务，可直接将 MML 文件转换为 Excel/CSV 表格、JSON、SQL 脚本或 SQLite 数据库。首次使用时安装后端及其依赖：
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .
+```
+
+Linux/macOS 将激活命令替换为 `source .venv/bin/activate`。以下命令均在 `backend` 目录中执行。
+
+转换为 Excel 表格：
+
+```powershell
+python -m app.cli.to_xls ..\data\config.mml
+```
+
+只生成 CSV，或同时生成 Excel 和 CSV：
+
+```powershell
+python -m app.cli.to_xls ..\data\config.mml --csv
+python -m app.cli.to_xls ..\data\config.mml --both -o ..\data\config-table
+```
+
+转换为 JSON：
+
+```powershell
+python -m app.cli.to_json ..\data\config.mml -o ..\data\config.json
+```
+
+同时生成 SQL 脚本和 SQLite 数据库：
+
+```powershell
+python -m app.cli.to_sql ..\data\config.mml -o ..\data\config.sql -d config.db
+```
+
+输入文件默认按 UTF-8 读取；GB18030/GBK 文件可添加 `--encoding gb18030` 或 `--encoding gbk`。省略 `-o` 时，输出默认与输入文件同目录、同名。更多参数见 Wiki 的[命令行转换](https://github.com/wzklhk/mml-manager/wiki/Command-Line-Conversion)，或运行 `python -m app.cli.to_sql --help`。
+
 ## 文档
 
 完整的使用、架构、接口和实现文档统一维护在 [MML Manager Wiki](https://github.com/wzklhk/mml-manager/wiki)：
 
 - [快速开始](https://github.com/wzklhk/mml-manager/wiki/Getting-Started)
+- [命令行转换：MML 转表格、JSON、SQL/SQLite](https://github.com/wzklhk/mml-manager/wiki/Command-Line-Conversion)
 - [系统架构](https://github.com/wzklhk/mml-manager/wiki/Architecture)
 - [配置与部署](https://github.com/wzklhk/mml-manager/wiki/Configuration-and-Deployment)
 - [HTTP API](https://github.com/wzklhk/mml-manager/wiki/HTTP-API)
