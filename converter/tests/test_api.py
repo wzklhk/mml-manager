@@ -14,6 +14,21 @@ def test_health_and_openapi_are_available():
         assert client.get("/openapi.json").status_code == 200
 
 
+def test_static_assets_are_not_intercepted_by_spa_fallback(tmp_path, monkeypatch):
+    javascript = tmp_path / "app.js"
+    javascript.write_text("console.log('ok')", encoding="utf-8")
+    monkeypatch.setattr("converter.main.STATIC_DIR", str(tmp_path))
+
+    from converter.main import create_app
+
+    with TestClient(create_app()) as client:
+        response = client.get("/static/app.js")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/javascript")
+    assert response.text == "console.log('ok')"
+
+
 def test_import_rejects_missing_or_wrong_file_type():
     with TestClient(app) as client:
         response = client.post("/api/import-mml")

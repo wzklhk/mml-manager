@@ -36,8 +36,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     application.include_router(api)
-    application.include_router(frontend)
     application.mount("/static", StaticFiles(directory=STATIC_DIR, check_dir=False), name="static")
+    # The SPA catch-all must be registered last or it will return index.html for
+    # JavaScript and CSS requests that belong to the static mount.
+    application.include_router(frontend)
     return application
 
 
