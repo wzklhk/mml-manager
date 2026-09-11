@@ -148,8 +148,11 @@ export const appModules = [
   },
 ];
 
-export const moduleGroups = [...new Set(appModules.map((module) => module.group))].map((name) => ({
+// Keep planned modules in the registry, but expose only implemented modules to the UI.
+export const enabledModules = appModules.filter((module) => module.enabled);
+
+export const moduleGroups = [...new Set(enabledModules.map((module) => module.group))].map((name) => ({
   name,
-  modules: appModules.filter((module) => module.group === name),
+  modules: enabledModules.filter((module) => module.group === name),
 }));
 export const getModule = (id) => appModules.find((module) => module.id === id);

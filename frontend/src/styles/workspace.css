@@ -71,10 +71,15 @@
 .home-content {
   overflow: auto;
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .workspace-home {
+  width: 100%;
+  flex: 1 0 auto;
   max-width: 1480px;
-  margin: auto;
+  margin: 0 auto;
   padding: 36px 40px 48px;
 }
 .home-intro {

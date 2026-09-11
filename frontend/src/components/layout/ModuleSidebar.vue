@@ -1,9 +1,10 @@
 <script setup>
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
-import { ref } from "vue";
-defineProps({ module: { type: Object, required: true } });
+import { computed, ref } from "vue";
+const props = defineProps({ module: { type: Object, required: true } });
 const collapsed = ref(false);
+const visibleMenu = computed(() => (props.module.menu || []).filter((item) => item.enabled));
 </script>
 <template>
   <aside class="module-sidebar" :class="{ collapsed }">
@@ -18,12 +19,9 @@ const collapsed = ref(false);
     <template v-if="!collapsed">
       <h2>{{ t(module.name) }}</h2>
       <nav :aria-label="t('workspace.functions')">
-        <template v-for="item in module.menu || []" :key="item.id">
-          <RouterLink v-if="item.enabled" :to="item.path" class="module-menu-item">{{ t(item.title) }}</RouterLink>
-          <button v-else class="module-menu-item" disabled>
-            {{ t(item.title) }}<small>{{ t("workspace.soon") }}</small>
-          </button>
-        </template>
+        <RouterLink v-for="item in visibleMenu" :key="item.id" :to="item.path" class="module-menu-item">
+          {{ t(item.title) }}
+        </RouterLink>
       </nav>
       <p v-if="module.description" class="sidebar-note">{{ t(module.description) }}</p>
     </template>

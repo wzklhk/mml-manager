@@ -36,11 +36,9 @@ function navigate(path) {
           <button
             v-for="module in group.modules"
             :key="module.id"
-            :disabled="!module.enabled"
             @click="navigate(module.path)"
           >
-            <span>{{ t(module.name) }}</span
-            ><small v-if="!module.enabled">{{ t("workspace.soon") }}</small>
+            <span>{{ t(module.name) }}</span>
           </button>
         </div>
       </section>

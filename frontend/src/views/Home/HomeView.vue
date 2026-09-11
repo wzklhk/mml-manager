@@ -2,8 +2,8 @@
 import { useI18n } from "vue-i18n";
 const { t } = useI18n();
 import { RouterLink } from "vue-router";
-import { appModules, moduleGroups } from "../../modules/registry";
-const enabledCount = appModules.filter((module) => module.enabled).length;
+import { enabledModules, moduleGroups } from "../../modules/registry";
+const enabledCount = enabledModules.length;
 </script>
 <template>
   <div class="workspace-home">
@@ -19,22 +19,20 @@ const enabledCount = appModules.filter((module) => module.enabled).length;
       <h2>{{ t(group.name) }}</h2>
       <div class="module-card-grid">
         <component
-          :is="module.enabled ? RouterLink : 'div'"
+          :is="RouterLink"
           v-for="module in group.modules"
           :key="module.id"
-          :to="module.enabled ? module.path : undefined"
+          :to="module.path"
           class="module-card"
-          :class="{ 'is-disabled': !module.enabled }"
-          :aria-disabled="!module.enabled"
         >
           <div class="module-card-top">
             <span class="module-icon" aria-hidden="true">{{ module.icon }}</span>
-            <span class="module-status">{{ t(module.enabled ? "workspace.available" : "workspace.soon") }}</span>
+            <span class="module-status">{{ t("workspace.available") }}</span>
           </div>
           <h3>{{ t(module.name) }}</h3>
           <span class="module-code">{{ module.code }}</span>
           <p>{{ t(module.description) }}</p>
-          <span class="module-card-action">{{ t(module.enabled ? "workspace.enter" : "workspace.soon") }}</span>
+          <span class="module-card-action">{{ t("workspace.enter") }}</span>
         </component>
       </div>
     </section>
