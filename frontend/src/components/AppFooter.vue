@@ -20,16 +20,16 @@
 
 <script>
 export default {
-  name: 'AppFooter',
+  name: "AppFooter",
   props: {
     showFooter: { type: Boolean, default: false },
   },
   computed: {
     year() {
-      return new Date().getFullYear()
+      return new Date().getFullYear();
     },
   },
-}
+};
 </script>
 
 <style scoped>

@@ -1,13 +1,13 @@
 <script setup>
-import { useI18n } from 'vue-i18n'
-const { t } = useI18n()
-import { computed, inject } from 'vue'
-import { useRoute } from 'vue-router'
-import { getModule } from '../../modules/registry'
-import ModuleSwitcher from './ModuleSwitcher.vue'
-const { isDark, toggleTheme, toggleLang } = inject('appearance')
-const route = useRoute()
-const currentName = computed(() => t(getModule(route.meta.moduleId)?.name || 'workspace.home'))
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+import { computed, inject } from "vue";
+import { useRoute } from "vue-router";
+import { getModule } from "../../modules/registry";
+import ModuleSwitcher from "./ModuleSwitcher.vue";
+const { isDark, toggleTheme, toggleLang } = inject("appearance");
+const route = useRoute();
+const currentName = computed(() => t(getModule(route.meta.moduleId)?.name || "workspace.home"));
 </script>
 <template>
   <header class="global-header">
@@ -21,10 +21,10 @@ const currentName = computed(() => t(getModule(route.meta.moduleId)?.name || 'wo
         :aria-label="t('workspace.search')"
         disabled
       />
-      <el-button disabled :title="t('workspace.settingsSoon')">{{ t('workspace.settings') }}</el-button>
+      <el-button disabled :title="t('workspace.settingsSoon')">{{ t("workspace.settings") }}</el-button>
       <!-- 语言切换 -->
       <button type="button" class="header-icon-btn lang-btn" aria-label="中文 / English" @click="toggleLang()">
-        {{ $i18n.locale === 'zh' ? 'EN' : '中文' }}
+        {{ $i18n.locale === "zh" ? "EN" : "中文" }}
       </button>
 
       <!-- 主题切换 -->

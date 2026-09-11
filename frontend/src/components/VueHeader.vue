@@ -1,7 +1,7 @@
 <template>
   <el-header class="vue-header">
     <div class="header-left">
-      <el-button @click="$emit('menu-select', 'overview')">{{ $t('header.table_overview') }}</el-button>
+      <el-button @click="$emit('menu-select', 'overview')">{{ $t("header.table_overview") }}</el-button>
       <el-select
         v-if="snapshots.length"
         :model-value="activeSnapshotId"
@@ -15,7 +15,7 @@
       <span v-if="selectedTable" class="selected-table-name">{{ selectedTable }}</span>
     </div>
     <div class="header-right">
-      <el-button size="default" @click="$emit('compare')">{{ $t('header.compare_mml') }}</el-button>
+      <el-button size="default" @click="$emit('compare')">{{ $t("header.compare_mml") }}</el-button>
       <el-upload
         class="header-upload"
         action="/api/import-mml"
@@ -26,7 +26,7 @@
         :show-file-list="false"
       >
         <el-button size="default" type="primary">
-          {{ $t('header.import_mml') }}
+          {{ $t("header.import_mml") }}
         </el-button>
       </el-upload>
     </div>
@@ -35,24 +35,24 @@
 
 <script>
 export default {
-  name: 'VueHeader',
+  name: "VueHeader",
   props: {
-    menuActive: { type: String, default: 'overview' },
-    selectedTable: { type: String, default: '' },
+    menuActive: { type: String, default: "overview" },
+    selectedTable: { type: String, default: "" },
     snapshots: { type: Array, default: () => [] },
-    activeSnapshotId: { type: String, default: '' },
+    activeSnapshotId: { type: String, default: "" },
   },
   methods: {
     beforeUpload(file) {
-      if (!['.mml', '.txt'].some((ext) => file.name.toLowerCase().endsWith(ext))) {
-        this.$message.error(this.$t('header.only_mml_file'))
-        return false
+      if (![".mml", ".txt"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
+        this.$message.error(this.$t("header.only_mml_file"));
+        return false;
       }
-      this.$emit('upload-start')
-      return true
+      this.$emit("upload-start");
+      return true;
     },
   },
-}
+};
 </script>
 
 <style scoped>

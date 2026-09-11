@@ -7,18 +7,18 @@
     destroy-on-close
     @close="close"
   >
-    <p class="compare-desc">{{ $t('compare.desc') }}</p>
+    <p class="compare-desc">{{ $t("compare.desc") }}</p>
     <div class="file-grid">
       <label class="file-box"
-        ><span>{{ $t('compare.baseline') }}</span
+        ><span>{{ $t("compare.baseline") }}</span
         ><input type="file" accept=".mml,.txt" @change="selectFile('baseline', $event)" /><small>{{
-          baseline ? baseline.name : $t('compare.no_file')
+          baseline ? baseline.name : $t("compare.no_file")
         }}</small></label
       >
       <label class="file-box"
-        ><span>{{ $t('compare.target') }}</span
+        ><span>{{ $t("compare.target") }}</span
         ><input type="file" accept=".mml,.txt" @change="selectFile('target', $event)" /><small>{{
-          target ? target.name : $t('compare.no_file')
+          target ? target.name : $t("compare.no_file")
         }}</small></label
       >
     </div>
@@ -26,7 +26,7 @@
       <div class="summary-grid">
         <div v-for="status in statuses" :key="status" :class="['summary-item', status]">
           <strong>{{ result.summary[status] }}</strong
-          ><span>{{ $t('compare.' + status) }}</span>
+          ><span>{{ $t("compare." + status) }}</span>
         </div>
       </div>
       <el-collapse v-model="activeTables">
@@ -38,12 +38,12 @@
             ><el-tag type="warning" size="small">~{{ table.summary.modified }}</el-tag>
           </template>
           <el-alert v-if="table.warning" :title="table.warning" type="warning" :closable="false" show-icon />
-          <div v-else class="key-hint">{{ $t('compare.key_field') }}: {{ table.key_fields.join(', ') }}</div>
+          <div v-else class="key-hint">{{ $t("compare.key_field") }}: {{ table.key_fields.join(", ") }}</div>
           <el-table :data="table.diffs" border stripe max-height="360">
             <el-table-column :label="$t('compare.status')" width="90"
               ><template #default="scope"
                 ><el-tag :type="tagType(scope.row.status)" size="small">{{
-                  $t('compare.' + scope.row.status)
+                  $t("compare." + scope.row.status)
                 }}</el-tag></template
               ></el-table-column
             >
@@ -65,18 +65,18 @@
       <el-empty v-if="changedTables.length === 0" :description="$t('compare.no_changes')" />
     </div>
     <template #footer
-      ><el-button @click="close">{{ $t('dialog.cancel') }}</el-button
+      ><el-button @click="close">{{ $t("dialog.cancel") }}</el-button
       ><el-button type="primary" :loading="loading" :disabled="!baseline || !target" @click="compare">{{
-        $t('compare.run')
+        $t("compare.run")
       }}</el-button></template
     >
   </el-dialog>
 </template>
 
 <script>
-import axios from 'axios'
+import axios from "axios";
 export default {
-  name: 'CompareDialog',
+  name: "CompareDialog",
   props: { visible: { type: Boolean, default: false } },
   data: () => ({
     baseline: null,
@@ -84,44 +84,44 @@ export default {
     loading: false,
     result: null,
     activeTables: [],
-    statuses: ['added', 'removed', 'modified', 'unchanged'],
+    statuses: ["added", "removed", "modified", "unchanged"],
   }),
   computed: {
     changedTables() {
-      return this.result ? this.result.tables.filter((table) => table.diffs.length > 0) : []
+      return this.result ? this.result.tables.filter((table) => table.diffs.length > 0) : [];
     },
   },
   methods: {
     close() {
-      this.$emit('update:visible', false)
+      this.$emit("update:visible", false);
     },
     selectFile(kind, event) {
-      this[kind] = event.target.files?.[0] || null
-      this.result = null
+      this[kind] = event.target.files?.[0] || null;
+      this.result = null;
     },
     display(value) {
-      return value === null || value === undefined || value === '' ? '∅' : String(value)
+      return value === null || value === undefined || value === "" ? "∅" : String(value);
     },
     tagType(status) {
-      return { added: 'success', removed: 'danger', modified: 'warning' }[status] || 'info'
+      return { added: "success", removed: "danger", modified: "warning" }[status] || "info";
     },
     async compare() {
-      const form = new FormData()
-      form.append('baseline', this.baseline)
-      form.append('target', this.target)
-      this.loading = true
+      const form = new FormData();
+      form.append("baseline", this.baseline);
+      form.append("target", this.target);
+      this.loading = true;
       try {
-        const response = await axios.post('/api/compare-mml', form)
-        this.result = response.data
-        this.activeTables = this.changedTables.slice(0, 1).map((table) => table.table_name)
+        const response = await axios.post("/api/compare-mml", form);
+        this.result = response.data;
+        this.activeTables = this.changedTables.slice(0, 1).map((table) => table.table_name);
       } catch (error) {
-        this.$message.error(error.response?.data?.error || this.$t('compare.failed'))
+        this.$message.error(error.response?.data?.error || this.$t("compare.failed"));
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
   },
-}
+};
 </script>
 
 <style scoped>

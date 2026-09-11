@@ -13,15 +13,15 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button @click="close">{{ $t('dialog.cancel') }}</el-button>
-      <el-button type="primary" @click="save">{{ isNewRow ? $t('dialog.add') : $t('dialog.save') }}</el-button>
+      <el-button @click="close">{{ $t("dialog.cancel") }}</el-button>
+      <el-button type="primary" @click="save">{{ isNewRow ? $t("dialog.add") : $t("dialog.save") }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script>
 export default {
-  name: 'EditDialog',
+  name: "EditDialog",
   props: {
     visible: { type: Boolean, default: false },
     isNewRow: { type: Boolean, default: false },
@@ -31,22 +31,22 @@ export default {
   computed: {
     dialogVisible: {
       get() {
-        return this.visible
+        return this.visible;
       },
       set(v) {
-        this.$emit('update:visible', v)
+        this.$emit("update:visible", v);
       },
     },
   },
   methods: {
     close() {
-      this.$emit('update:visible', false)
+      this.$emit("update:visible", false);
     },
     save() {
-      this.$emit('save')
+      this.$emit("save");
     },
   },
-}
+};
 </script>
 
 <style scoped>

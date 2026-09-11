@@ -43,12 +43,12 @@
 .mml-ui .el-button + .el-button {
   margin-left: 0;
 }
-.mml-ui .el-button:not([class*='el-button--']) {
+.mml-ui .el-button:not([class*="el-button--"]) {
   color: var(--text-primary);
   border-color: var(--el-border-color);
   background: var(--bg-secondary);
 }
-.mml-ui .el-button:not([class*='el-button--']):hover:not(:disabled) {
+.mml-ui .el-button:not([class*="el-button--"]):hover:not(:disabled) {
   color: var(--el-color-primary);
   border-color: var(--el-color-primary);
   background: var(--hover-bg);

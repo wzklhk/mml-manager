@@ -1,9 +1,9 @@
 <script setup>
-import { useI18n } from 'vue-i18n'
-const { t } = useI18n()
-import { ref } from 'vue'
-defineProps({ module: { type: Object, required: true } })
-const collapsed = ref(false)
+import { useI18n } from "vue-i18n";
+const { t } = useI18n();
+import { ref } from "vue";
+defineProps({ module: { type: Object, required: true } });
+const collapsed = ref(false);
 </script>
 <template>
   <aside class="module-sidebar" :class="{ collapsed }">
@@ -13,7 +13,7 @@ const collapsed = ref(false)
       :aria-label="t('workspace.toggleMenu')"
       @click="collapsed = !collapsed"
     >
-      {{ collapsed ? '☰' : '☰ ' + t('workspace.menu') }}
+      {{ collapsed ? "☰" : "☰ " + t("workspace.menu") }}
     </button>
     <template v-if="!collapsed">
       <h2>{{ t(module.name) }}</h2>
@@ -21,7 +21,7 @@ const collapsed = ref(false)
         <template v-for="item in module.menu || []" :key="item.id">
           <RouterLink v-if="item.enabled" :to="item.path" class="module-menu-item">{{ t(item.title) }}</RouterLink>
           <button v-else class="module-menu-item" disabled>
-            {{ t(item.title) }}<small>{{ t('workspace.soon') }}</small>
+            {{ t(item.title) }}<small>{{ t("workspace.soon") }}</small>
           </button>
         </template>
       </nav>

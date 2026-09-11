@@ -6,7 +6,7 @@
         {{ tableName }}
       </h2>
       <p class="page-desc">
-        {{ columns.length }} {{ $t('detail.columns') }} &middot;
+        {{ columns.length }} {{ $t("detail.columns") }} &middot;
         <template v-for="(col, idx) in columns" :key="col">
           <code class="inline-code">{{ col }}<span v-if="idx < columns.length - 1">, </span></code>
         </template>
@@ -17,17 +17,17 @@
       <div class="mml-toolbar">
         <span class="batch-info">
           {{
-            selectedRows.length ? $t('detail.selected_rows', { count: selectedRows.length }) : $t('detail.batch_hint')
+            selectedRows.length ? $t("detail.selected_rows", { count: selectedRows.length }) : $t("detail.batch_hint")
           }}
         </span>
         <div class="mml-actions">
           <el-button type="danger" plain :disabled="selectedRows.length === 0" @click="$emit('batch-delete')">{{
-            $t('detail.batch_delete')
+            $t("detail.batch_delete")
           }}</el-button>
           <el-button :disabled="selectedRows.length === 0" @click="$emit('batch-export')">{{
-            $t('detail.batch_export')
+            $t("detail.batch_export")
           }}</el-button>
-          <el-button type="primary" @click="$emit('add-row')">{{ $t('detail.batch_add') }}</el-button>
+          <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.batch_add") }}</el-button>
         </div>
       </div>
     </el-card>
@@ -54,15 +54,15 @@
           min-width="130"
         >
           <template #default="scope">
-            <span class="cell-value">{{ scope.row.config_data[col] || '-' }}</span>
+            <span class="cell-value">{{ scope.row.config_data[col] || "-" }}</span>
           </template>
         </el-table-column>
         <el-table-column :label="$t('detail.actions')" width="184" fixed="right" align="right">
           <template #default="scope">
             <div class="mml-row-actions">
-              <el-button size="small" @click="$emit('edit-row', scope.row)">{{ $t('detail.edit') }}</el-button>
+              <el-button size="small" @click="$emit('edit-row', scope.row)">{{ $t("detail.edit") }}</el-button>
               <el-button size="small" type="danger" plain @click="$emit('delete-row', scope.row)">{{
-                $t('detail.delete')
+                $t("detail.delete")
               }}</el-button>
             </div>
           </template>
@@ -87,9 +87,9 @@
 
 <script>
 export default {
-  name: 'TableDetail',
+  name: "TableDetail",
   props: {
-    tableName: { type: String, default: '' },
+    tableName: { type: String, default: "" },
     columns: { type: Array, default: () => [] },
     configs: { type: Array, default: () => [] },
     loading: { type: Boolean, default: false },
@@ -98,10 +98,10 @@ export default {
   },
   methods: {
     onSort({ prop, order }) {
-      this.$emit('sort-change', { prop, order })
+      this.$emit("sort-change", { prop, order });
     },
   },
-}
+};
 </script>
 
 <style scoped>
@@ -127,7 +127,7 @@ export default {
   line-height: 1.5;
 }
 .inline-code {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   background: var(--inline-code-bg);
   padding: 1px 6px;
   border-radius: 4px;
@@ -159,7 +159,7 @@ export default {
   padding: 16px;
 }
 .cell-value {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 12.5px;
   color: var(--text-primary);
 }

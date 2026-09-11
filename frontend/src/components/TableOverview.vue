@@ -1,8 +1,8 @@
 <template>
   <div class="page-content">
     <div class="page-header">
-      <h2 class="page-title">{{ $t('overview.title') }}</h2>
-      <p class="page-desc">{{ $t('overview.desc') }}</p>
+      <h2 class="page-title">{{ $t("overview.title") }}</h2>
+      <p class="page-desc">{{ $t("overview.desc") }}</p>
     </div>
 
     <el-card shadow="never" class="filter-card">
@@ -17,7 +17,7 @@
           />
         </div>
         <div class="mml-actions">
-          <el-button @click="$emit('refresh')">{{ $t('overview.refresh') }}</el-button>
+          <el-button @click="$emit('refresh')">{{ $t("overview.refresh") }}</el-button>
         </div>
       </div>
     </el-card>
@@ -41,7 +41,7 @@
         <el-table-column :label="$t('overview.created_at')" prop="created_at" width="180" sortable="custom" />
         <el-table-column :label="$t('overview.actions')" width="112" align="right" fixed="right">
           <template #default="scope">
-            <el-button size="small" @click="$emit('enter-table', scope.row)">{{ $t('overview.view') }}</el-button>
+            <el-button size="small" @click="$emit('enter-table', scope.row)">{{ $t("overview.view") }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -63,19 +63,19 @@
 
 <script>
 export default {
-  name: 'TableOverview',
+  name: "TableOverview",
   props: {
     tables: { type: Array, default: () => [] },
-    modelValue: { type: String, default: '' },
+    modelValue: { type: String, default: "" },
     pagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },
   },
   methods: {
     onSort({ prop, order }) {
-      if (!prop || !order) return
-      this.$emit('sort', { prop, order })
+      if (!prop || !order) return;
+      this.$emit("sort", { prop, order });
     },
   },
-}
+};
 </script>
 
 <style scoped>

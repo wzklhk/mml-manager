@@ -11,7 +11,7 @@
           <div class="aside-header">
             <h3 class="aside-title">
               <i class="el-icon-menu" style="color: #41b883; margin-right: 6px"></i>
-              {{ $t('sidebar.tables_title') || 'Tables' }}
+              {{ $t("sidebar.tables_title") || "Tables" }}
             </h3>
             <div class="aside-header-actions">
               <el-button
@@ -60,7 +60,7 @@
               {{ selectedTable }}
             </h3>
             <div class="aside-header-actions">
-              <el-tag size="small" type="success" effect="dark">{{ totalRows }} {{ $t('sidebar.rows') }}</el-tag>
+              <el-tag size="small" type="success" effect="dark">{{ totalRows }} {{ $t("sidebar.rows") }}</el-tag>
               <el-button
                 size="small"
                 circle
@@ -74,7 +74,7 @@
           </div>
 
           <div class="aside-section">
-            <div class="aside-section-title">{{ $t('sidebar.columns_title') }}</div>
+            <div class="aside-section-title">{{ $t("sidebar.columns_title") }}</div>
             <div class="aside-column-list">
               <div v-for="col in columns" :key="col" class="aside-column-item">
                 <span class="col-dot"></span>
@@ -90,16 +90,16 @@
 
 <script>
 export default {
-  name: 'Sidebar',
+  name: "Sidebar",
   props: {
-    selectedTable: { type: String, default: '' },
+    selectedTable: { type: String, default: "" },
     tables: { type: Array, default: () => [] },
     columns: { type: Array, default: () => [] },
     totalRows: { type: Number, default: 0 },
     tablePagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },
     collapsed: { type: Boolean, default: false },
   },
-}
+};
 </script>
 
 <style scoped>
@@ -213,7 +213,7 @@ export default {
   flex-shrink: 0;
 }
 .col-name {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 12.5px;
 }
 
