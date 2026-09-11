@@ -4,7 +4,6 @@ import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import zhCn from "element-plus/dist/locale/zh-cn.mjs";
 import en from "element-plus/dist/locale/en.mjs";
-import AppFooter from "./components/AppFooter.vue";
 
 const { locale, t } = useI18n();
 const route = useRoute();
@@ -44,13 +43,8 @@ onBeforeUnmount(() => {
 
 <template>
   <el-config-provider :locale="elementLocale">
-    <div class="app-shell">
-      <div class="app-content">
-        <RouterView v-slot="{ Component }">
-          <KeepAlive><component :is="Component" /></KeepAlive>
-        </RouterView>
-      </div>
-      <AppFooter />
-    </div>
+    <RouterView v-slot="{ Component }">
+      <KeepAlive><component :is="Component" /></KeepAlive>
+    </RouterView>
   </el-config-provider>
 </template>
