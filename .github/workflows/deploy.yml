@@ -58,19 +58,21 @@ jobs:
         run: |
           python -m venv .venv
           source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-        working-directory: converter
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+        working-directory: backend
 
       - name: 打包部署包
         run: |
           mkdir -p deploy
-          # 后端核心
-          cp -r converter deploy/converter
+          # 后端核心（包含前端构建产物）
+          cp -r backend deploy/backend
           # 移除 venv 和 pycache
-          rm -rf deploy/converter/.venv deploy/converter/*/__pycache__ deploy/converter/__pycache__
+          rm -rf deploy/backend/.venv
+          find deploy/backend -type d -name __pycache__ -prune -exec rm -rf {} +
           # 脚本
-          cp run.sh deploy/
+          mkdir -p deploy/scripts
+          cp scripts/run.sh deploy/scripts/
           # 元信息
           echo "${{ github.sha }}" > deploy/VERSION
           echo "${{ github.ref_name }}" > deploy/BRANCH
@@ -147,11 +149,11 @@ jobs:
             rm -f "/tmp/mml-manager-${{ github.sha }}.tar.gz"
 
             # 重建 venv + 装依赖
-            cd "$APP_DIR/converter"
+            cd "$APP_DIR/backend"
             python3 -m venv .venv 2>/dev/null || python3 -m venv --without-pip .venv
             source .venv/bin/activate
-            pip install --upgrade pip -q
-            pip install -r requirements.txt -q
+            python -m pip install --upgrade pip -q
+            python -m pip install -e . -q
 
             # 重启服务（假设用 systemd 或 supervisor）
             if systemctl is-active --quiet mml-manager 2>/dev/null; then
@@ -162,7 +164,7 @@ jobs:
               echo "服务已重启 (supervisor)"
             else
               echo "警告：未找到 systemd/supervisor 服务，请手动启动："
-              echo "  cd $APP_DIR/converter && source .venv/bin/activate && python app.py &"
+              echo "  cd $APP_DIR/backend && source .venv/bin/activate && python -m app.main &"
             fi
 
             # 清理旧备份（保留最近 3 个）
