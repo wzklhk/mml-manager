@@ -130,10 +130,6 @@ body {
   overflow-y: auto;
   transition: background 0.3s;
 }
-.footer-sentinel {
-  height: 1px;
-}
-
 /* ====== 5. Header / Footer ====== */
 .vue-header {
   background: var(--header-bg);

@@ -63,8 +63,6 @@
           @edit-row="handleEdit"
           @delete-row="handleDelete"
         />
-
-        <div ref="footerSentinel" class="footer-sentinel"></div>
       </el-main>
     </el-container>
 
@@ -76,8 +74,6 @@
       @save="saveEdit"
     />
     <CompareDialog v-model:visible="compareDialogVisible" />
-
-    <AppFooter :show-footer="showFooter" />
   </div>
 </template>
 
@@ -87,13 +83,12 @@ import Sidebar from "../../components/Sidebar.vue";
 import TableOverview from "../../components/TableOverview.vue";
 import TableDetail from "../../components/TableDetail.vue";
 import EditDialog from "../../components/EditDialog.vue";
-import AppFooter from "../../components/AppFooter.vue";
 import CompareDialog from "../../components/CompareDialog.vue";
 import axios from "axios";
 
 export default {
   name: "MmlQueryView",
-  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, AppFooter, CompareDialog },
+  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, CompareDialog },
   data() {
     return {
       configs: [],
@@ -105,8 +100,6 @@ export default {
       loading: false,
       tableSearch: "",
       selectedRows: [],
-      showFooter: false,
-      footerObserver: null,
       sidebarCollapsed: false,
       pagination: { page: 1, pageSize: 20, total: 0 },
       tablePagination: { page: 1, pageSize: 20, total: 0 },
@@ -145,29 +138,7 @@ export default {
     this.loadSnapshots();
     this.loadTables();
   },
-  activated() {
-    this.$nextTick(() => this.setupFooterObserver());
-  },
-  deactivated() {
-    if (this.footerObserver) this.footerObserver.disconnect();
-  },
-  beforeUnmount() {
-    if (this.footerObserver) this.footerObserver.disconnect();
-  },
   methods: {
-    setupFooterObserver() {
-      if (this.footerObserver) this.footerObserver.disconnect();
-      const sentinel = this.$refs.footerSentinel;
-      if (!sentinel) return;
-      this.footerObserver = new IntersectionObserver(
-        (entries) => {
-          this.showFooter = entries[0].isIntersecting;
-        },
-        { root: null, threshold: 0 },
-      );
-      this.footerObserver.observe(sentinel);
-    },
-
     handleMenuSelect(index) {
       if (index === "overview") this.backToOverview();
     },

@@ -1,6 +1,6 @@
 <template>
-  <div ref="footerWrapper">
-    <footer v-show="showFooter" class="vue-footer">
+  <div>
+    <footer class="vue-footer">
       <div class="footer-content">
         <span class="footer-license">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="#999" style="vertical-align: -2px; margin-right: 4px">
@@ -21,9 +21,6 @@
 <script>
 export default {
   name: "AppFooter",
-  props: {
-    showFooter: { type: Boolean, default: false },
-  },
   computed: {
     year() {
       return new Date().getFullYear();

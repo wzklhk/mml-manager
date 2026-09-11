@@ -1,5 +1,15 @@
-.workspace-shell {
+.app-shell {
   height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-content {
+  flex: 1;
+  min-height: 0;
+}
+.workspace-shell {
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
