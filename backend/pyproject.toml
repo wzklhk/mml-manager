@@ -1,0 +1,44 @@
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+
+[project]
+name = "mml-manager"
+version = "0.1.0"
+description = "FastAPI backend and conversion toolkit for MML configuration management"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0,<0.141.0",
+    "httpx>=0.27.0",
+    "lxml>=4.9.0",
+    "openpyxl>=3.0.0",
+    "pandas>=2.0.0",
+    "python-multipart>=0.0.9",
+    "pyyaml>=6.0",
+    "uvicorn[standard]>=0.30.0",
+    "xlrd>=2.0.1",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0.0"]
+dev = [
+    "black==25.1.0",
+    "pytest>=7.0.0",
+]
+
+[project.scripts]
+mml-manager = "app.main:run"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+app = ["resources/*.yaml"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

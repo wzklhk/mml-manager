@@ -250,3 +250,11 @@ Thumbs.db
 
 # Temp files
 temp_*.mml
+
+# Runtime data and generated frontend bundle
+data/*
+!data/.gitkeep
+backend/src/app/static/
+
+# Local Codex repository instructions
+AGENTS.md

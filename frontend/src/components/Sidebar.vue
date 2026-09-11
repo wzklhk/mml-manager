@@ -10,8 +10,8 @@
         <template v-if="!selectedTable">
           <div class="aside-header">
             <h3 class="aside-title">
-              <i class="el-icon-menu" style="color: #41b883; margin-right: 6px;"></i>
-              {{ $t('sidebar.tables_title') || 'Tables' }}
+              <i class="el-icon-menu" style="color: #41b883; margin-right: 6px"></i>
+              {{ $t("sidebar.tables_title") || "Tables" }}
             </h3>
             <div class="aside-header-actions">
               <el-button
@@ -28,13 +28,11 @@
 
           <div class="aside-section">
             <div class="aside-table-list">
-              <div
-                v-for="t in tables"
-                :key="t.table_name"
-                class="aside-table-item"
-                @click="$emit('select-table', t)"
-              >
-                <i class="el-icon-s-data" style="color: #41b883; font-size: 14px; margin-right: 6px; flex-shrink: 0;"></i>
+              <div v-for="t in tables" :key="t.table_name" class="aside-table-item" @click="$emit('select-table', t)">
+                <i
+                  class="el-icon-s-data"
+                  style="color: #41b883; font-size: 14px; margin-right: 6px; flex-shrink: 0"
+                ></i>
                 <span class="table-item-name">{{ t.table_name }}</span>
                 <el-tag size="small" type="success" effect="dark" class="table-item-count">{{ t.count }}</el-tag>
               </div>
@@ -58,11 +56,11 @@
         <template v-else>
           <div class="aside-header">
             <h3 class="aside-title">
-              <i class="el-icon-s-grid" style="color: #41b883; margin-right: 6px;"></i>
+              <i class="el-icon-s-grid" style="color: #41b883; margin-right: 6px"></i>
               {{ selectedTable }}
             </h3>
             <div class="aside-header-actions">
-              <el-tag size="small" type="success" effect="dark">{{ totalRows }} {{ $t('sidebar.rows') }}</el-tag>
+              <el-tag size="small" type="success" effect="dark">{{ totalRows }} {{ $t("sidebar.rows") }}</el-tag>
               <el-button
                 size="small"
                 circle
@@ -76,7 +74,7 @@
           </div>
 
           <div class="aside-section">
-            <div class="aside-section-title">{{ $t('sidebar.columns_title') }}</div>
+            <div class="aside-section-title">{{ $t("sidebar.columns_title") }}</div>
             <div class="aside-column-list">
               <div v-for="col in columns" :key="col" class="aside-column-item">
                 <span class="col-dot"></span>
@@ -92,16 +90,16 @@
 
 <script>
 export default {
-  name: 'Sidebar',
+  name: "Sidebar",
   props: {
-    selectedTable: { type: String, default: '' },
+    selectedTable: { type: String, default: "" },
     tables: { type: Array, default: () => [] },
     columns: { type: Array, default: () => [] },
     totalRows: { type: Number, default: 0 },
     tablePagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },
-    collapsed: { type: Boolean, default: false }
-  }
-}
+    collapsed: { type: Boolean, default: false },
+  },
+};
 </script>
 
 <style scoped>
@@ -176,7 +174,9 @@ export default {
   color: var(--text-secondary) !important;
 }
 
-.aside-section { margin-bottom: 20px; }
+.aside-section {
+  margin-bottom: 20px;
+}
 .aside-section-title {
   font-size: 11px;
   font-weight: 600;
@@ -202,15 +202,18 @@ export default {
   color: var(--text-secondary);
   transition: background 0.15s;
 }
-.aside-column-item:hover { background: var(--hover-bg); }
+.aside-column-item:hover {
+  background: var(--hover-bg);
+}
 .col-dot {
-  width: 6px; height: 6px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #41b883;
   flex-shrink: 0;
 }
 .col-name {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 12.5px;
 }
 
@@ -248,7 +251,10 @@ export default {
   height: 18px !important;
   line-height: 18px !important;
 }
-.aside-pagination { margin-top: 14px; justify-content: center; }
+.aside-pagination {
+  margin-top: 14px;
+  justify-content: center;
+}
 
 .expand-trigger {
   position: absolute;
@@ -268,7 +274,9 @@ export default {
   color: var(--text-muted);
   font-size: 14px;
   z-index: 10;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .expand-trigger:hover {

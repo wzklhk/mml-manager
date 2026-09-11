@@ -1,7 +1,7 @@
 <template>
   <el-header class="vue-header">
     <div class="header-left">
-      <el-button @click="$emit('menu-select', 'overview')">{{ $t('header.table_overview') }}</el-button>
+      <el-button @click="$emit('menu-select', 'overview')">{{ $t("header.table_overview") }}</el-button>
       <el-select
         v-if="snapshots.length"
         :model-value="activeSnapshotId"
@@ -15,11 +15,10 @@
       <span v-if="selectedTable" class="selected-table-name">{{ selectedTable }}</span>
     </div>
     <div class="header-right">
-
-      <el-button size="default" @click="$emit('compare')">{{ $t('header.compare_mml') }}</el-button>
+      <el-button size="default" @click="$emit('compare')">{{ $t("header.compare_mml") }}</el-button>
       <el-upload
         class="header-upload"
-        action="/api/import-mml"
+        :action="uploadUrl"
         @success="(r) => $emit('upload-success', r)"
         @error="(e) => $emit('upload-error', e)"
         :before-upload="beforeUpload"
@@ -27,7 +26,7 @@
         :show-file-list="false"
       >
         <el-button size="default" type="primary">
-          {{ $t('header.import_mml') }}
+          {{ $t("header.import_mml") }}
         </el-button>
       </el-upload>
     </div>
@@ -35,25 +34,32 @@
 </template>
 
 <script>
+import { apiUrl } from "../api/client";
+
 export default {
-  name: 'VueHeader',
+  name: "VueHeader",
   props: {
-    menuActive: { type: String, default: 'overview' },
-    selectedTable: { type: String, default: '' },
+    menuActive: { type: String, default: "overview" },
+    selectedTable: { type: String, default: "" },
     snapshots: { type: Array, default: () => [] },
-    activeSnapshotId: { type: String, default: '' }
+    activeSnapshotId: { type: String, default: "" },
+  },
+  computed: {
+    uploadUrl() {
+      return apiUrl("/api/import-mml");
+    },
   },
   methods: {
     beforeUpload(file) {
-      if (!['.mml', '.txt'].some(ext => file.name.toLowerCase().endsWith(ext))) {
-        this.$message.error(this.$t('header.only_mml_file'))
-        return false
+      if (![".mml", ".txt"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
+        this.$message.error(this.$t("header.only_mml_file"));
+        return false;
       }
-      this.$emit('upload-start')
-      return true
-    }
-  }
-}
+      this.$emit("upload-start");
+      return true;
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -70,9 +76,30 @@ export default {
   background: var(--header-bg);
   border-bottom: 1px solid var(--border-color);
 }
-.header-left, .header-right { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.header-right { margin-left: auto; }
-.selected-table-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--text-secondary); }
-.snapshot-select { width: 220px; max-width: 100%; }
-.header-upload { display: inline-flex; }
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.header-right {
+  margin-left: auto;
+}
+.selected-table-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.snapshot-select {
+  width: 220px;
+  max-width: 100%;
+}
+.header-upload {
+  display: inline-flex;
+}
 </style>

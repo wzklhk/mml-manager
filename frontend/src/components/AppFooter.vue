@@ -1,16 +1,17 @@
 <template>
-  <div ref="footerWrapper">
-    <footer v-show="showFooter" class="vue-footer">
+  <div>
+    <footer class="vue-footer">
       <div class="footer-content">
         <span class="footer-license">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="#999" style="vertical-align: -2px; margin-right: 4px;">
-            <path d="M12 2L2 7v5c0 5.25 3.86 10.14 10 11 6.14-.86 10-5.75 10-11V7l-10-5z"/>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="#999" style="vertical-align: -2px; margin-right: 4px">
+            <path d="M12 2L2 7v5c0 5.25 3.86 10.14 10 11 6.14-.86 10-5.75 10-11V7l-10-5z" />
           </svg>
           MIT License
         </span>
         <span class="footer-sep">·</span>
         <span class="footer-copyright">
-          &copy; {{ year }} <a href="https://github.com/wzklhk" target="_blank" class="copyright-link">wzklhk</a>. All rights reserved.
+          &copy; {{ year }} <a href="https://github.com/wzklhk" target="_blank" class="copyright-link">wzklhk</a>. All
+          rights reserved.
         </span>
       </div>
     </footer>
@@ -19,14 +20,13 @@
 
 <script>
 export default {
-  name: 'AppFooter',
-  props: {
-    showFooter: { type: Boolean, default: false }
-  },
+  name: "AppFooter",
   computed: {
-    year() { return new Date().getFullYear() }
-  }
-}
+    year() {
+      return new Date().getFullYear();
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -39,13 +39,30 @@ export default {
   transition: background 0.3s;
 }
 .footer-content {
-  font-size: 12.5px; color: var(--text-muted);
-  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
-.footer-license { display: inline-flex; align-items: center; color: var(--text-muted); }
-.footer-sep { color: var(--text-secondary); }
-.footer-copyright { color: var(--text-muted); }
-.copyright-link { color: var(--text-secondary); text-decoration: none; transition: color 0.15s; }
-.copyright-link:hover { color: #41b883; }
-
+.footer-license {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+.footer-sep {
+  color: var(--text-secondary);
+}
+.footer-copyright {
+  color: var(--text-muted);
+}
+.copyright-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.copyright-link:hover {
+  color: #41b883;
+}
 </style>
