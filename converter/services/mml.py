@@ -9,9 +9,9 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
 
-from mml_parser import parse_mml_text
-from service.memory_store import store
-from utils.mml import format_mml_command
+from ..mml_parser import parse_mml_text
+from ..utils.mml import format_mml_command
+from .memory_store import store
 
 
 KEY_FIELD_CANDIDATES = (

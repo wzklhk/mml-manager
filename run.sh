@@ -95,8 +95,8 @@ start_backend() {
     fi
 
     info "启动后端服务..."
-    cd "$CONVERTER_DIR"
-    exec python app.py
+    cd "$ROOT_DIR"
+    exec python -m converter.main
 }
 
 # ---- 开发模式 ----
@@ -104,8 +104,8 @@ start_dev() {
     ensure_venv
 
     info "启动后端 (port 5000)..."
-    cd "$CONVERTER_DIR"
-    python app.py &
+    cd "$ROOT_DIR"
+    python -m converter.main &
     BACKEND_PID=$!
 
     info "启动前端开发服务器 (port 8080)..."

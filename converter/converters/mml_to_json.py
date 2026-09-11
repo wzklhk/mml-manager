@@ -6,9 +6,9 @@ import os
 from datetime import datetime
 from typing import Dict, List
 
-from converters.mml_to_sql import parse_mml_file, sort_configs_by_values
-from utils.parse import parse_any_command as util_parse
-from utils.sort import sort_records
+from .mml_to_sql import parse_mml_file, sort_configs_by_values
+from ..utils.parse import parse_any_command as util_parse
+from ..utils.sort import sort_records
 
 
 def convert_file_to_json(

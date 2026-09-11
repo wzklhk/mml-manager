@@ -2,7 +2,7 @@ import os
 import tempfile
 import unittest
 
-from service.mml_service import _parse_mml_text, compare_mml_files
+from converter.services.mml import _parse_mml_text, compare_mml_files
 
 
 class CompareMmlTests(unittest.TestCase):

@@ -9,8 +9,8 @@ import sqlite3
 import json
 from typing import Dict, List, Optional, Tuple, Any
 
-from config import get_settings
-from converters.mml_to_sql import generate_create_table_sql, generate_insert_sql, infer_column_type, quote_identifier
+from ..core.config import get_settings
+from ..converters.mml_to_sql import generate_create_table_sql, generate_insert_sql, infer_column_type, quote_identifier
 
 _DB_PATH: str | None = None
 

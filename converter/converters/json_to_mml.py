@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
-from utils.mml import format_mml_command, format_mml_value_simple
+from ..utils.mml import format_mml_command, format_mml_value_simple
 
 
 def escape_mml_value(value: Any) -> str:

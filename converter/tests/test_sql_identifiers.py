@@ -1,8 +1,8 @@
 import sqlite3
 
-from converters.mml_to_sql import generate_create_table_sql, generate_insert_sql, generate_sql_script
-from service.mml_service import import_mml_file
-from service.memory_store import store
+from converter.converters.mml_to_sql import generate_create_table_sql, generate_insert_sql, generate_sql_script
+from converter.services.mml import import_mml_file
+from converter.services.memory_store import store
 
 
 def test_generated_sql_supports_table_names_with_spaces():

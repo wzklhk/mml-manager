@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
-from mml_parser import parse_any_command, parse_mml_text
+from ..mml_parser import parse_any_command, parse_mml_text
 
 # ============================================================
 #  解析

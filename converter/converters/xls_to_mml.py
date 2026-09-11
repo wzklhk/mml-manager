@@ -4,7 +4,7 @@
 import os
 from typing import Dict, Optional
 
-from utils.mml import format_mml_value_simple
+from ..utils.mml import format_mml_value_simple
 
 
 def convert_xls_to_mml(input_file: str, output_file: str = None) -> Dict:

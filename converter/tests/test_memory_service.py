@@ -1,4 +1,4 @@
-from service import mml_service
+from converter.services import mml as mml_service
 
 
 def test_import_view_edit_and_export_use_memory(tmp_path):

@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, File, Query, UploadFile
 from fastapi.responses import JSONResponse
 
-from service import mml_service
+from ..services import mml as mml_service
 
 api = APIRouter(prefix="/api")
 MAX_COMPARE_FILE_SIZE = 20 * 1024 * 1024

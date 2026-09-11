@@ -1,4 +1,4 @@
-from mml_parser import parse_mml_text
+from converter.mml_parser import parse_mml_text
 
 
 def test_parses_all_add_and_set_forms_with_quoted_delimiters():

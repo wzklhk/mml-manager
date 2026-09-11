@@ -98,8 +98,8 @@ function start_backend {
     }
 
     info "Starting backend service..."
-    Push-Location $CONVERTER_DIR
-    python app.py
+    Push-Location $ROOT_DIR
+    python -m converter.main
     Pop-Location
 }
 
@@ -108,9 +108,9 @@ function start_dev {
     ensure_venv
 
     info "Starting backend (port 5000)..."
-    Push-Location $CONVERTER_DIR
+    Push-Location $ROOT_DIR
     $pythonExe = Join-Path $VENV_DIR "Scripts\python.exe"
-    $backendJob = Start-Job -ScriptBlock { param($d, $python) Push-Location $d; & $python app.py; Pop-Location } -ArgumentList $CONVERTER_DIR, $pythonExe
+    $backendJob = Start-Job -ScriptBlock { param($d, $python) Push-Location $d; & $python -m converter.main; Pop-Location } -ArgumentList $ROOT_DIR, $pythonExe
     Pop-Location
 
     info "Starting frontend dev server (port 8080)..."

@@ -1,6 +1,6 @@
 """Compatibility wrappers around the shared MML parser."""
 
-from mml_parser import parse_any_command, parse_key_value_pairs, parse_mml_text
+from ..mml_parser import parse_any_command, parse_key_value_pairs, parse_mml_text
 
 
 def parse_mml_file(file_path: str, encoding: str = "utf-8"):

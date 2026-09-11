@@ -4,11 +4,11 @@
 import os
 from typing import Dict, List, Optional
 
-from converters.mml_to_sql import parse_mml_file
-from utils.sort import sort_configs
-from utils.io_handler import print_statistics
+from .mml_to_sql import parse_mml_file
+from ..utils.sort import sort_configs
+from ..utils.io_handler import print_statistics
 from tabular import write_excel, write_csvs
-from utils.table import MmlConfig
+from ..utils.table import MmlConfig
 
 
 def convert_numeric_strings(value):
@@ -42,7 +42,7 @@ def convert(
     Returns:
         {output_excel, output_csv_dir, config_count, table_count}
     """
-    from utils.io_handler import read_mml_file
+    from ..utils.io_handler import read_mml_file
 
     dataset = read_mml_file(input_file, encoding=encoding)
     if dataset.total_count == 0:

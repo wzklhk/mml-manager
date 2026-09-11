@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
 
-from converters.mml_to_sql import convert_file_to_sql, list_commands_in_file
+from ..converters.mml_to_sql import convert_file_to_sql, list_commands_in_file
 from cli.utils import ensure_input_file, resolve_output_path, add_common_args
 
 
