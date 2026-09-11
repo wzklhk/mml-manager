@@ -12,8 +12,11 @@
 """
 
 import os
+from copy import deepcopy
 import yaml
 from typing import Any, Dict
+
+PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ---- 默认配置 ----
 DEFAULTS: Dict[str, Any] = {
@@ -41,7 +44,7 @@ def _find_config() -> str | None:
         return env_path
 
     # 2. 当前目录（与 app.py 同级）
-    local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
+    local_path = os.path.join(PACKAGE_DIR, "config.yaml")
     if os.path.isfile(local_path):
         return local_path
 
@@ -78,7 +81,7 @@ def load_config() -> Dict[str, Any]:
     """
     global _SETTINGS
 
-    settings = dict(DEFAULTS)  # 深拷贝
+    settings = deepcopy(DEFAULTS)
 
     config_path = _find_config()
     config_dir = os.path.dirname(config_path) if config_path else os.getcwd()

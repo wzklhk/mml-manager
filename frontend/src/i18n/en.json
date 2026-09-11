@@ -1,23 +1,21 @@
 {
   "app.title": "MML Configuration Manager",
-
   "header.table_overview": "Overview",
   "header.import_mml": "Import MML",
   "header.compare_mml": "Compare",
-  "header.only_mml_file": "Only .mml files are allowed!",
+  "header.only_mml_file": "Only .mml or .txt files are allowed!",
+  "header.select_config": "Switch configuration",
   "header.theme_light": "Light",
   "header.theme_dark": "Dark",
   "header.lang_zh": "中文",
   "header.lang_en": "EN",
-
   "sidebar.expand": "Expand sidebar",
   "sidebar.collapse": "Collapse sidebar",
   "sidebar.rows": "rows",
   "sidebar.columns_title": "Columns",
   "sidebar.tables_title": "Tables",
-
   "overview.title": "Table Overview",
-  "overview.desc": "All configuration tables in database",
+  "overview.desc": "All command tables in the active configuration",
   "overview.search_placeholder": "Search table name...",
   "overview.refresh": "Refresh",
   "overview.table_name": "Table Name",
@@ -26,7 +24,6 @@
   "overview.created_at": "Created At",
   "overview.actions": "Actions",
   "overview.view": "View",
-
   "detail.columns": "columns",
   "detail.selected_rows": "{count} row(s) selected",
   "detail.batch_hint": "Check checkboxes on the left for batch operations",
@@ -36,22 +33,21 @@
   "detail.actions": "Actions",
   "detail.edit": "Edit",
   "detail.delete": "Delete",
-
   "dialog.add_row": "Add Row",
   "dialog.edit_config": "Edit Configuration",
   "dialog.input_placeholder": "Please enter {col}",
   "dialog.cancel": "Cancel",
   "dialog.add": "Add",
   "dialog.save": "Save",
-
   "confirm.delete_title": "Confirm Delete",
   "confirm.delete_content": "Are you sure you want to delete this configuration? This cannot be undone.",
   "confirm.batch_delete_title": "Batch Delete",
   "confirm.batch_delete_content": "Are you sure you want to delete the {count} selected configuration(s)? This cannot be undone.",
   "confirm.btn_confirm": "Confirm Delete",
   "confirm.btn_cancel": "Cancel",
-
   "msg.load_tables_fail": "Failed to load tables: {msg}",
+  "msg.load_snapshots_fail": "Failed to load configurations: {msg}",
+  "msg.switch_snapshot_fail": "Failed to switch configuration: {msg}",
   "msg.load_configs_fail": "Failed to load configurations: {msg}",
   "msg.upload_fail": "Upload failed, please check the file format",
   "msg.delete_success": "Deleted successfully",
@@ -65,9 +61,102 @@
   "msg.save_fail": "Save failed: {msg}",
   "compare.title": "Compare MML Configurations",
   "compare.desc": "Choose a baseline and target. Files are compared temporarily and are not imported.",
-  "compare.baseline": "Baseline", "compare.target": "Target", "compare.no_file": "No file selected",
-  "compare.run": "Compare", "compare.failed": "Configuration comparison failed", "compare.added": "Added",
-  "compare.removed": "Removed", "compare.modified": "Modified", "compare.unchanged": "Unchanged",
-  "compare.key_field": "Matched by", "compare.status": "Status", "compare.record": "Record",
-  "compare.details": "Field changes", "compare.no_changes": "The configurations are identical"
+  "compare.baseline": "Baseline",
+  "compare.target": "Target",
+  "compare.no_file": "No file selected",
+  "compare.run": "Compare",
+  "compare.failed": "Configuration comparison failed",
+  "compare.added": "Added",
+  "compare.removed": "Removed",
+  "compare.modified": "Modified",
+  "compare.unchanged": "Unchanged",
+  "compare.key_field": "Matched by",
+  "compare.status": "Status",
+  "compare.record": "Record",
+  "compare.details": "Field changes",
+  "compare.no_changes": "The configurations are identical",
+  "workspace": {
+    "home": "Workbench",
+    "homepage": "Home",
+    "intro": "Connect configuration management with network planning, resources and operations.",
+    "availableCount": "{count} modules available",
+    "available": "Available",
+    "soon": "Coming Soon",
+    "enter": "Open module →",
+    "switcher": "Switch module",
+    "globalSwitcher": "Global module switcher",
+    "search": "Global search · Coming Soon",
+    "settings": "Settings",
+    "settingsSoon": "System settings coming soon",
+    "menu": "Module menu",
+    "toggleMenu": "Collapse or expand module menu",
+    "functions": "Current module functions",
+    "query": "Configuration Query",
+    "history": "Query History",
+    "groups": {
+      "configuration": "Configuration Management",
+      "planning": "Network Planning",
+      "resources": "Network Resources",
+      "operations": "Operations Tools",
+      "system": "System Administration"
+    },
+    "modules": {
+      "mml": {
+        "name": "MML Configuration",
+        "description": "Query, maintain and compare network configurations and imported snapshots."
+      },
+      "templates": {
+        "name": "Configuration Templates",
+        "description": "Manage reusable configuration templates."
+      },
+      "generator": {
+        "name": "Configuration Generation",
+        "description": "Generate device configurations from planning parameters."
+      },
+      "ipam": {
+        "name": "IP Address Planning",
+        "description": "Plan address pools, subnets and IP assignments."
+      },
+      "conflicts": {
+        "name": "Subnet Conflict Detection",
+        "description": "Detect overlapping subnets in address plans."
+      },
+      "lld": {
+        "name": "LLD Management",
+        "description": "Organize detailed network designs and delivery documents."
+      },
+      "elements": {
+        "name": "Network Elements",
+        "description": "Manage network element information centrally."
+      },
+      "sites": {
+        "name": "Sites",
+        "description": "Organize sites and their network resources."
+      },
+      "topology": {
+        "name": "Network Topology",
+        "description": "Explore network connections and resource relationships."
+      },
+      "checks": {
+        "name": "Configuration Checks",
+        "description": "Check configuration standards and consistency."
+      },
+      "diff": {
+        "name": "Data Comparison",
+        "description": "Compare data across sources."
+      },
+      "batch": {
+        "name": "Batch Configuration",
+        "description": "Organize configuration tasks across network elements."
+      },
+      "transfer": {
+        "name": "Data Import / Export",
+        "description": "Exchange and back up system data."
+      },
+      "settings": {
+        "name": "System Settings",
+        "description": "Manage global workbench settings."
+      }
+    }
+  }
 }

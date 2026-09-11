@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import argparse
 
-from converters.mml_to_xls import convert_file_to_excel_and_csv
+from ..converters.mml_to_xls import convert_file_to_excel_and_csv
 from cli.utils import ensure_input_file, add_common_args
 
 

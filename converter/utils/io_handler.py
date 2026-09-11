@@ -14,12 +14,12 @@ from typing import (
 from datetime import (
     datetime,
 )
-from utils.table import (
+from .table import (
     MmlDataSet,
     TableGroup,
     MmlConfig,
 )
-from utils.parse import (
+from .parse import (
     parse_any_command,
 )
 
@@ -84,7 +84,7 @@ def write_mml_file(
         exist_ok=True,
     )
 
-    from utils.mml import (
+    from .mml import (
         format_mml_command,
     )
 

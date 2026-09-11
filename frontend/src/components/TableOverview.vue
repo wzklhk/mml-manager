@@ -6,21 +6,20 @@
     </div>
 
     <el-card shadow="never" class="filter-card">
-      <el-row :gutter="16" type="flex" align="middle">
-        <el-col :span="8">
+      <div class="mml-toolbar">
+        <div class="mml-search">
           <el-input
             :model-value="modelValue"
             @update:model-value="$emit('update:modelValue', $event)"
             :placeholder="$t('overview.search_placeholder')"
-            prefix-icon="el-icon-search"
             clearable
             size="default"
           />
-        </el-col>
-        <el-col :span="16" style="text-align: right;">
-          <el-button icon="el-icon-refresh" size="small" @click="$emit('refresh')">{{ $t('overview.refresh') }}</el-button>
-        </el-col>
-      </el-row>
+        </div>
+        <div class="mml-actions">
+          <el-button  @click="$emit('refresh')">{{ $t('overview.refresh') }}</el-button>
+        </div>
+      </div>
     </el-card>
 
     <el-card shadow="never" class="data-card">
@@ -40,12 +39,24 @@
         </el-table-column>
         <el-table-column :label="$t('overview.row_count')" prop="count" width="100" sortable="custom" align="center" />
         <el-table-column :label="$t('overview.created_at')" prop="created_at" width="180" sortable="custom" />
-        <el-table-column :label="$t('overview.actions')" width="100" align="center">
+        <el-table-column :label="$t('overview.actions')" width="112" align="right" fixed="right">
           <template #default="scope">
-            <el-button size="small" type="primary" plain @click="$emit('enter-table', scope.row)">{{ $t('overview.view') }}</el-button>
+            <el-button size="small"  @click="$emit('enter-table', scope.row)">{{ $t('overview.view') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
+      <div class="pagination-wrapper">
+        <el-pagination
+          background
+          layout="total, sizes, prev, pager, next"
+          :current-page="pagination.page"
+          :page-sizes="[10, 20, 50, 100]"
+          :page-size="pagination.pageSize"
+          :total="pagination.total"
+          @current-change="$emit('page-change', $event)"
+          @size-change="$emit('size-change', $event)"
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -55,7 +66,8 @@ export default {
   name: 'TableOverview',
   props: {
     tables: { type: Array, default: () => [] },
-    modelValue: { type: String, default: '' }
+    modelValue: { type: String, default: '' },
+    pagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) }
   },
   methods: {
     onSort({ prop, order }) {
@@ -70,18 +82,19 @@ export default {
 .page-content { max-width: 1200px; margin: 0 auto; }
 .page-header { margin-bottom: 24px; }
 .page-title {
-  font-size: 24px; font-weight: 600; color: #1a1a2e;
+  font-size: 24px; font-weight: 600; color: var(--text-primary);
   margin: 0 0 6px 0; display: flex; align-items: center;
 }
-.page-desc { font-size: 14px; color: #888; margin: 0; line-height: 1.5; }
+.page-desc { font-size: 14px; color: var(--text-muted); margin: 0; line-height: 1.5; }
 .filter-card {
-  margin-bottom: 16px; border: 1px solid #e8e8e8; border-radius: 8px;
+  margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 8px;
 }
-.data-card { border: 1px solid #e8e8e8; border-radius: 8px; }
+.data-card { border: 1px solid var(--border-color); border-radius: 8px; }
 .data-card .el-card__body { padding: 16px; }
 .table-link { font-weight: 500; }
 .table-link:hover { color: #2c9c6f !important; }
 .col-tag {
-  margin: 2px 3px; border: none; background: #e8f5e9; color: #2e7d32;
+  margin: 2px 3px; border: none; background: var(--tag-bg); color: var(--tag-color);
 }
+.pagination-wrapper { margin-top: 20px; display: flex; justify-content: flex-end; overflow-x: auto; }
 </style>

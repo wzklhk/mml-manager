@@ -14,27 +14,16 @@
     </div>
 
     <el-card shadow="never" class="batch-toolbar">
-      <el-row type="flex" align="middle">
-        <el-col :span="12">
-          <span v-if="selectedRows.length > 0" class="batch-info">
-            {{ $t('detail.selected_rows', { count: selectedRows.length }) }}
-          </span>
-          <span v-else class="batch-info" style="color: #999;">
-            <i class="el-icon-info"></i> {{ $t('detail.batch_hint') }}
-          </span>
-        </el-col>
-        <el-col :span="12" style="text-align: right;">
-          <el-button size="small" type="danger" :disabled="selectedRows.length === 0" @click="$emit('batch-delete')">
-            <i class="el-icon-delete"></i> {{ $t('detail.batch_delete') }}
-          </el-button>
-          <el-button size="small" type="primary" @click="$emit('add-row')">
-            <i class="el-icon-plus"></i> {{ $t('detail.batch_add') }}
-          </el-button>
-          <el-button size="small" class="vue-btn-outline-green" :disabled="selectedRows.length === 0" @click="$emit('batch-export')">
-            <i class="el-icon-download"></i> {{ $t('detail.batch_export') }}
-          </el-button>
-        </el-col>
-      </el-row>
+      <div class="mml-toolbar">
+        <span class="batch-info">
+          {{ selectedRows.length ? $t('detail.selected_rows', { count: selectedRows.length }) : $t('detail.batch_hint') }}
+        </span>
+        <div class="mml-actions">
+          <el-button type="danger" plain :disabled="selectedRows.length === 0" @click="$emit('batch-delete')">{{ $t('detail.batch_delete') }}</el-button>
+          <el-button :disabled="selectedRows.length === 0" @click="$emit('batch-export')">{{ $t('detail.batch_export') }}</el-button>
+          <el-button type="primary" @click="$emit('add-row')">{{ $t('detail.batch_add') }}</el-button>
+        </div>
+      </div>
     </el-card>
 
     <el-card shadow="never" class="data-card">
@@ -57,10 +46,10 @@
             <span class="cell-value">{{ scope.row.config_data[col] || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('detail.actions')" width="150" fixed="right">
+        <el-table-column :label="$t('detail.actions')" width="184" fixed="right" align="right">
           <template #default="scope">
-            <el-button size="small" type="warning" plain @click="$emit('edit-row', scope.row)">{{ $t('detail.edit') }}</el-button>
-            <el-button size="small" type="danger" plain @click="$emit('delete-row', scope.row)">{{ $t('detail.delete') }}</el-button>
+            <div class="mml-row-actions"><el-button size="small" @click="$emit('edit-row', scope.row)">{{ $t('detail.edit') }}</el-button>
+            <el-button size="small" type="danger" plain @click="$emit('delete-row', scope.row)">{{ $t('detail.delete') }}</el-button></div>
           </template>
         </el-table-column>
       </el-table>
@@ -104,37 +93,27 @@ export default {
 .page-content { max-width: 1200px; margin: 0 auto; }
 .page-header { margin-bottom: 24px; }
 .page-title {
-  font-size: 24px; font-weight: 600; color: #1a1a2e;
+  font-size: 24px; font-weight: 600; color: var(--text-primary);
   margin: 0 0 6px 0; display: flex; align-items: center;
 }
-.page-desc { font-size: 14px; color: #888; margin: 0; line-height: 1.5; }
+.page-desc { font-size: 14px; color: var(--text-muted); margin: 0; line-height: 1.5; }
 .inline-code {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  background: #f0f0f0; padding: 1px 6px; border-radius: 4px;
-  font-size: 12.5px; color: #476582;
+  background: var(--inline-code-bg); padding: 1px 6px; border-radius: 4px;
+  font-size: 12.5px; color: var(--inline-code-color);
 }
 .batch-toolbar {
-  margin-bottom: 12px; border: 1px solid #e8e8e8;
-  border-radius: 8px; background: #fafbfc;
+  margin-bottom: 16px; border: 1px solid var(--border-color);
+  border-radius: 8px; background: var(--bg-tertiary);
 }
 .batch-toolbar .el-card__body { padding: 12px 16px; }
-.batch-info { font-size: 13px; color: #555; }
+.batch-info { font-size: 13px; color: var(--text-secondary); }
 .batch-info strong { color: #e6a23c; font-size: 15px; }
-.vue-btn-outline-green {
-  background: transparent !important;
-  border: 1px solid #41b883 !important;
-  color: #41b883 !important;
-}
-.vue-btn-outline-green:hover {
-  background: rgba(65,184,131,0.08) !important;
-  color: #2c9c6f !important; border-color: #2c9c6f !important;
-}
-.vue-btn-outline-green.is-disabled { border-color: #ddd !important; color: #ccc !important; }
-.data-card { border: 1px solid #e8e8e8; border-radius: 8px; }
+.data-card { border: 1px solid var(--border-color); border-radius: 8px; }
 .data-card .el-card__body { padding: 16px; }
 .cell-value {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 12.5px; color: #333;
+  font-size: 12.5px; color: var(--text-primary);
 }
 .pagination-wrapper { margin-top: 20px; display: flex; justify-content: flex-end; }
 </style>

@@ -9,8 +9,8 @@ import sqlite3
 import json
 from typing import Dict, List, Optional, Tuple, Any
 
-from config import get_settings
-from converters.mml_to_sql import generate_create_table_sql, generate_insert_sql, infer_column_type
+from ..core.config import get_settings
+from ..converters.mml_to_sql import generate_create_table_sql, generate_insert_sql, infer_column_type, quote_identifier
 
 _DB_PATH: str | None = None
 
@@ -104,7 +104,7 @@ def upsert_meta(table_name: str, columns: List[str]) -> None:
 
 def _get_existing_columns(db, table_name: str) -> set:
     """获取表当前已有的列名"""
-    cursor = db.execute(f'PRAGMA table_info("{table_name}")')
+    cursor = db.execute(f"PRAGMA table_info({quote_identifier(table_name)})")
     return {row["name"] for row in cursor.fetchall()}
 
 
@@ -121,7 +121,10 @@ def ensure_columns(table_name: str, required_columns: List[str]) -> List[str]:
             if col not in existing:
                 col_type = infer_column_type(col)
                 try:
-                    db.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{col}" {col_type}')
+                    db.execute(
+                        f"ALTER TABLE {quote_identifier(table_name)} "
+                        f"ADD COLUMN {quote_identifier(col)} {col_type}"
+                    )
                 except Exception as e:
                     print(f"[WARN] 添加列 {table_name}.{col} 失败: {e}")
 
@@ -142,7 +145,7 @@ def create_table_if_not_exists(table_name: str, columns: List[str]) -> bool:
 def count_rows(table_name: str) -> int:
     """获取表的总行数"""
     with DatabaseConnection() as db:
-        cursor = db.execute(f'SELECT COUNT(*) as cnt FROM "{table_name}"')
+        cursor = db.execute(f"SELECT COUNT(*) as cnt FROM {quote_identifier(table_name)}")
         return cursor.fetchone()["cnt"]
 
 
@@ -162,7 +165,7 @@ def update_row(table_name: str, rowid: int, data: Dict[str, Any]) -> bool:
     set_parts = []
     values = []
     for key, val in data.items():
-        set_parts.append(f'"{key}" = ?')
+        set_parts.append(f"{quote_identifier(key)} = ?")
         values.append(val)
     if not set_parts:
         return False
@@ -170,14 +173,14 @@ def update_row(table_name: str, rowid: int, data: Dict[str, Any]) -> bool:
     values.append(rowid)
     set_clause = ", ".join(set_parts)
     with DatabaseConnection() as db:
-        cursor = db.execute(f'UPDATE "{table_name}" SET {set_clause} WHERE rowid = ?', values)
+        cursor = db.execute(f"UPDATE {quote_identifier(table_name)} SET {set_clause} WHERE rowid = ?", values)
         return cursor.rowcount > 0
 
 
 def delete_row(table_name: str, rowid: int) -> bool:
     """删除一行数据，返回是否删除成功"""
     with DatabaseConnection() as db:
-        cursor = db.execute(f'DELETE FROM "{table_name}" WHERE rowid = ?', (rowid,))
+        cursor = db.execute(f"DELETE FROM {quote_identifier(table_name)} WHERE rowid = ?", (rowid,))
         return cursor.rowcount > 0
 
 
@@ -187,7 +190,9 @@ def delete_rows(table_name: str, rowids: List[int]) -> int:
         return 0
     placeholders = ",".join(["?"] * len(rowids))
     with DatabaseConnection() as db:
-        cursor = db.execute(f'DELETE FROM "{table_name}" WHERE rowid IN ({placeholders})', rowids)
+        cursor = db.execute(
+            f"DELETE FROM {quote_identifier(table_name)} WHERE rowid IN ({placeholders})", rowids
+        )
         return cursor.rowcount
 
 
@@ -204,13 +209,13 @@ def query_rows(
     返回 (rows, total_count)。
     每行包含 rowid 和所有列的值。
     """
-    cols_quoted = [f'"{c}"' for c in columns]
+    cols_quoted = [quote_identifier(c) for c in columns]
     cols_str = ", ".join(cols_quoted)
     offset = (page - 1) * page_size
 
     # 排序
     if sort_by and sort_by in columns:
-        sort_col = f'"{sort_by}"'
+        sort_col = quote_identifier(sort_by)
         order = "ASC" if sort_order.lower() == "asc" else "DESC"
         order_clause = f"ORDER BY {sort_col} {order}"
     else:
@@ -218,11 +223,14 @@ def query_rows(
 
     with DatabaseConnection() as db:
         # 总行数
-        total = db.execute(f'SELECT COUNT(*) as cnt FROM "{table_name}"').fetchone()["cnt"]
+        total = db.execute(
+            f"SELECT COUNT(*) as cnt FROM {quote_identifier(table_name)}"
+        ).fetchone()["cnt"]
 
         # 分页数据
         cursor = db.execute(
-            f'SELECT rowid, {cols_str} FROM "{table_name}" {order_clause} LIMIT ? OFFSET ?', (page_size, offset)
+            f"SELECT rowid, {cols_str} FROM {quote_identifier(table_name)} "
+            f"{order_clause} LIMIT ? OFFSET ?", (page_size, offset)
         )
         rows = []
         for row in cursor.fetchall():
@@ -240,11 +248,13 @@ def query_rows(
 
 def query_row(table_name: str, rowid: int, columns: List[str]) -> Optional[Dict]:
     """查询单行数据"""
-    cols_quoted = [f'"{c}"' for c in columns]
+    cols_quoted = [quote_identifier(c) for c in columns]
     cols_str = ", ".join(cols_quoted)
 
     with DatabaseConnection() as db:
-        cursor = db.execute(f'SELECT rowid, {cols_str} FROM "{table_name}" WHERE rowid = ?', (rowid,))
+        cursor = db.execute(
+            f"SELECT rowid, {cols_str} FROM {quote_identifier(table_name)} WHERE rowid = ?", (rowid,)
+        )
         row = cursor.fetchone()
         if not row:
             return None
@@ -259,12 +269,14 @@ def query_row(table_name: str, rowid: int, columns: List[str]) -> Optional[Dict]
 
 def query_all_rows(table_name: str, columns: List[str], sort_by: str = None) -> List[Dict]:
     """查询表的所有行（用于导出）"""
-    cols_quoted = [f'"{c}"' for c in columns]
+    cols_quoted = [quote_identifier(c) for c in columns]
     cols_str = ", ".join(cols_quoted)
 
     with DatabaseConnection() as db:
-        order_clause = f'"{sort_by}", rowid' if sort_by in columns else "rowid"
-        cursor = db.execute(f'SELECT {cols_str} FROM "{table_name}" ORDER BY {order_clause}')
+        order_clause = f"{quote_identifier(sort_by)}, rowid" if sort_by in columns else "rowid"
+        cursor = db.execute(
+            f"SELECT {cols_str} FROM {quote_identifier(table_name)} ORDER BY {order_clause}"
+        )
         return [dict(row) for row in cursor.fetchall()]
 
 
@@ -272,12 +284,13 @@ def query_rows_by_ids(table_name: str, rowids: List[int], columns: List[str]) ->
     """按 rowid 列表查询多行数据"""
     if not rowids:
         return []
-    cols_quoted = [f'"{c}"' for c in columns]
+    cols_quoted = [quote_identifier(c) for c in columns]
     cols_str = ", ".join(cols_quoted)
     placeholders = ",".join(["?"] * len(rowids))
 
     with DatabaseConnection() as db:
         cursor = db.execute(
-            f'SELECT rowid, {cols_str} FROM "{table_name}" WHERE rowid IN ({placeholders}) ORDER BY rowid', rowids
+            f"SELECT rowid, {cols_str} FROM {quote_identifier(table_name)} "
+            f"WHERE rowid IN ({placeholders}) ORDER BY rowid", rowids
         )
         return [dict(row) for row in cursor.fetchall()]

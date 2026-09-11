@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import List, Optional
 
-from utils.io_handler import write_mml_file
-from converters.mml_to_sql import parse_any_command
+from ..utils.io_handler import write_mml_file
+from .mml_to_sql import parse_any_command
 from tabular import read_excel, read_csv, read_csv_batch
 from cli_common import resolve_output_path
 

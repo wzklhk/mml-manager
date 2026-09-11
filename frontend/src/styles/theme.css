@@ -36,6 +36,8 @@
   --el-input-border: #dcdfe6;
   --inline-code-bg: #f0f0f0;
   --inline-code-color: #476582;
+  --tag-bg: #e8f5e9;
+  --tag-color: #2e7d32;
 }
 
 /* ====== 2. CSS 变量: 暗色主题 ====== */
@@ -70,10 +72,33 @@ html.dark {
   --el-input-border: #3a3a60;
   --inline-code-bg: #2a2a50;
   --inline-code-color: #aac8e4;
+  --tag-bg: #193b2c;
+  --tag-color: #8bd5ad;
 }
 
 /* ====== 3. 全局重置 ====== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 仅在主动切换主题时统一颜色动画，避免各组件以不同速度变化。 */
+html.theme-transitioning,
+html.theme-transitioning body,
+html.theme-transitioning body *,
+html.theme-transitioning body *::before,
+html.theme-transitioning body *::after {
+  transition-property: background-color, color, border-color, box-shadow, fill, stroke, opacity, transform !important;
+  transition-duration: 240ms !important;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning,
+  html.theme-transitioning body,
+  html.theme-transitioning body *,
+  html.theme-transitioning body *::before,
+  html.theme-transitioning body *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
 
 html, body {
   height: 100%; margin: 0;
@@ -182,9 +207,11 @@ html.dark .el-card {
   color: var(--text-primary);
 }
 html.dark .el-input__inner {
-  background: var(--el-input-bg);
-  border-color: var(--el-input-border);
   color: var(--text-primary);
+}
+html.dark .el-input__wrapper {
+  background: var(--el-input-bg);
+  box-shadow: 0 0 0 1px var(--el-input-border) inset;
 }
 html.dark .el-input__inner::placeholder {
   color: var(--text-muted);

@@ -7,24 +7,31 @@
 - 转换器与 CLI：MML 与 Excel、CSV、SQL、JSON 双向转换
 - 配置表查询、排序、分页、编辑和导出
 - 基线与现网 MML 的新增、删除、修改及字段级对比
-- 双文件对比支持 UTF-8、GB18030 和跨行 MML；Web 导入当前按 UTF-8 逐行读取
-- Vue 3 + Element Plus 界面，支持中英文及明暗主题
-
-## 当前进展（2026-09-09）
-
-当前 `main` 基于 Flask + SQLite，已具备配置维护与双文件差异分析能力。FastAPI、TXT 导入及内存多配置切换已在 `codex/fastapi-backend` 分支实现，尚未合入本次核查的主分支。
-
-近期优先修复依赖安装与开发启动问题、统一解析行为，再验证迁移分支。配置版本管理、复合主键、关联检查及变更回退仍待完成；已知问题、验证记录及计划见[项目进展](https://github.com/wzklhk/mml-manager/wiki/Project-Status)和[路线图](https://github.com/wzklhk/mml-manager/wiki/Roadmap)。
+- 完整解析 `ADD`/`SET`，兼容含空格命令名、单双引号值、UTF-8 与 GB18030
+- 导入会创建可切换的进程内配置快照；查看、编辑、删除和导出均操作当前快照
+- Web 配置管理暂未接入 SQLite：服务重启会清空快照，多 worker 之间也不共享数据
+- Vue 3 + Element Plus 界面，支持中英文、明暗主题和模块化工作台
 
 ## 快速启动
 
+要求已安装 Python 3、Node.js 和 npm。在项目根目录运行：
+
+```powershell
+# Windows PowerShell
+.\run.ps1
+```
+
 ```bash
+# Linux / macOS
+chmod +x run.sh
 ./run.sh
 ```
 
-首次安装前请先查看[启动限制与临时处理](https://github.com/wzklhk/mml-manager/wiki/Getting-Started)：当前依赖文件含无效的 `pandas>=` 声明。
+无参数运行脚本时，每次都会执行 `npm run build` 重新打包前端，然后启动 FastAPI。启动后访问 `http://localhost:5000`。
 
-Windows PowerShell 使用 `.\run.ps1`。启动后访问 `http://localhost:5000`。
+前端没有变化且已有 `converter/static` 构建产物时，可使用 `.\run.ps1 start` 或 `./run.sh start` 跳过打包；日常开发使用 `.\run.ps1 dev` 或 `./run.sh dev`，由 Vite 提供热更新，也不会生成生产包。
+
+更多启动方式、环境配置和 API 地址见 Wiki 的[快速开始](https://github.com/wzklhk/mml-manager/wiki/Getting-Started)。
 
 ## 文档
 

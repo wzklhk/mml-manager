@@ -6,10 +6,10 @@ import os
 from typing import Dict, List, Optional
 from datetime import datetime
 
-from converters.mml_to_sql import parse_key_value_pairs
-from utils.io_handler import write_mml_file, print_statistics
-from utils.table import MmlDataSet, MmlConfig, sanitize_table_name
-from utils.mml import quote_mml_value
+from .mml_to_sql import parse_key_value_pairs
+from ..utils.io_handler import write_mml_file, print_statistics
+from ..utils.table import MmlDataSet, MmlConfig, sanitize_table_name
+from ..utils.mml import quote_mml_value
 
 
 def parse_insert_statements(sql_text: str) -> List[Dict]:

@@ -4,7 +4,7 @@
 import os
 from typing import Dict, List, Optional
 
-from utils.mml import format_mml_value_simple
+from ..utils.mml import format_mml_value_simple
 
 
 def row_to_mml(table_name: str, row: Dict, cmd_type: str = "SET") -> str:

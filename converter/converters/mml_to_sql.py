@@ -2,52 +2,15 @@
 """MML → SQL 转换核心模块"""
 
 import os
-import re
 import sqlite3
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
+from ..mml_parser import parse_any_command, parse_mml_text
+
 # ============================================================
 #  解析
 # ============================================================
-
-
-def parse_key_value_pairs(text: str) -> Dict[str, Optional[str]]:
-    """解析键值对，如 ID=201,NAME="ToJSZUSPP01_SCTP_SYN_01",LOCPORT=5001
-
-    支持 key 中包含空格，value 中包含空格或引号。
-    双引号值内支持 "" 转义。
-    """
-    result = {}
-    # key 允许含空格（但不含 = 和 ,）
-    # value 支持双引号括起（内部 "" 转义）或普通字符（不含逗号）
-    pattern = r'([^=,]+)=(?:"((?:[^"]|"")*)"|([^,]*))'
-    for key, quoted_val, unquoted_val in re.findall(pattern, text):
-        key = key.strip()
-        value = quoted_val if quoted_val else unquoted_val
-        if quoted_val is not None:
-            value = value.replace('""', '"')
-        value = value.strip()
-        result[key] = value if value else None
-    return result
-
-
-def parse_any_command(line: str) -> Optional[Dict]:
-    """解析任意 SET 或 ADD 命令
-
-    支持 CMD 名、参数 key/value 中包含空格。
-    格式: SET CMD NAME:key1=val1,key2="val 2",key3=val3
-    """
-    match = re.match(r"(SET|ADD)\s+(.+?):(.+)", line.strip())
-    if not match:
-        return None
-    cmd_type = match.group(1)
-    table_name = match.group(2).strip()
-    values_str = match.group(3)
-    if values_str.endswith(";"):
-        values_str = values_str[:-1]
-    values = parse_key_value_pairs(values_str)
-    return {"table": table_name, "values": values, "cmd_type": cmd_type}
 
 
 # ============================================================
@@ -94,12 +57,17 @@ def infer_column_type(column_name: str) -> str:
     return "TEXT"
 
 
+def quote_identifier(identifier: str) -> str:
+    """将 SQLite 表名或列名安全地引用为标识符。"""
+    return '"' + identifier.replace('"', '""') + '"'
+
+
 def generate_create_table_sql(table_name: str, columns: List[str]) -> str:
     """生成 CREATE TABLE IF NOT EXISTS 语句"""
-    cols = [f'  "{c}" {infer_column_type(c)}' for c in columns]
+    cols = [f"  {quote_identifier(c)} {infer_column_type(c)}" for c in columns]
     nl = "\n"
     sep = ",\n"
-    return f"CREATE TABLE IF NOT EXISTS {table_name} ({nl}{sep.join(cols)}{nl});"
+    return f"CREATE TABLE IF NOT EXISTS {quote_identifier(table_name)} ({nl}{sep.join(cols)}{nl});"
 
 
 def generate_insert_sql(
@@ -119,7 +87,7 @@ def generate_insert_sql(
     """
     columns = list(data.keys())
     values = list(data.values())
-    cols_quoted = [f'"{c}"' for c in columns]
+    cols_quoted = [quote_identifier(c) for c in columns]
     cols_str = ", ".join(cols_quoted)
 
     if for_sql_file:
@@ -133,11 +101,11 @@ def generate_insert_sql(
             else:
                 escaped = str(v).replace(quote, quote + quote)
                 vals.append(f"{quote}{escaped}{quote}")
-        sql = f"INSERT INTO {table_name} ({cols_str}) VALUES ({', '.join(vals)});"
+        sql = f"INSERT INTO {quote_identifier(table_name)} ({cols_str}) VALUES ({', '.join(vals)});"
         return sql, []
     else:
         placeholders = ", ".join(["?"] * len(columns))
-        sql = f"INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders});"
+        sql = f"INSERT INTO {quote_identifier(table_name)} ({cols_str}) VALUES ({placeholders});"
         return sql, values
 
 
@@ -190,22 +158,12 @@ def sort_configs_by_values(configs: List[Dict]) -> List[Dict]:
 
 def parse_mml_file(input_path: str, encoding: str = "utf-8") -> Tuple[Dict, Dict]:
     """解析 MML 文件，返回 (configs_by_table, all_columns)"""
-    configs_by_table = {}
-    all_columns = {}
-
     with open(input_path, "r", encoding=encoding) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("--"):
-                continue
-            config = parse_any_command(line)
-            if config:
-                tn = config["table"]
-                if tn not in configs_by_table:
-                    configs_by_table[tn] = []
-                    all_columns[tn] = set()
-                configs_by_table[tn].append(config)
-                all_columns[tn].update(config["values"].keys())
+        configs_by_table = parse_mml_text(f.read())
+    all_columns = {
+        table_name: {key for config in configs for key in config["values"]}
+        for table_name, configs in configs_by_table.items()
+    }
 
     for tn in configs_by_table:
         configs_by_table[tn] = sort_configs_by_values(configs_by_table[tn])
@@ -231,7 +189,7 @@ def generate_sql_script(
         columns = sorted(list(all_columns[table_name]))
         if include_comments:
             statements.append(f"-- {table_name} 表")
-        statements.append(f"DROP TABLE IF EXISTS {table_name};")
+        statements.append(f"DROP TABLE IF EXISTS {quote_identifier(table_name)};")
         statements.append(generate_create_table_sql(table_name, columns))
         statements.append("")
 
@@ -243,9 +201,9 @@ def generate_sql_script(
     if include_comments:
         statements.append("-- 查询示例")
         for tn in sorted(all_columns.keys()):
-            statements.append(f"-- SELECT COUNT(*) FROM {tn};")
+            statements.append(f"-- SELECT COUNT(*) FROM {quote_identifier(tn)};")
             if "ID" in all_columns[tn]:
-                statements.append(f"-- SELECT * FROM {tn} WHERE ID > 100 LIMIT 10;")
+                statements.append(f"-- SELECT * FROM {quote_identifier(tn)} WHERE ID > 100 LIMIT 10;")
             statements.append("")
 
     return statements
@@ -285,7 +243,7 @@ def create_database(db_path: str, configs_by_table: Dict, all_columns: Dict):
 
     for table_name in sorted(all_columns.keys()):
         columns = sorted(list(all_columns[table_name]))
-        conn.execute(f"DROP TABLE IF EXISTS {table_name};")
+        conn.execute(f"DROP TABLE IF EXISTS {quote_identifier(table_name)};")
         conn.execute(generate_create_table_sql(table_name, columns))
 
         for config in configs_by_table[table_name]:

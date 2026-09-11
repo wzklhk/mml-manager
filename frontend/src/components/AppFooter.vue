@@ -39,13 +39,13 @@ export default {
   transition: background 0.3s;
 }
 .footer-content {
-  font-size: 12.5px; color: #888;
+  font-size: 12.5px; color: var(--text-muted);
   display: flex; align-items: center; justify-content: center; gap: 10px;
 }
-.footer-license { display: inline-flex; align-items: center; color: #999; }
-.footer-sep { color: #555; }
-.footer-copyright { color: #888; }
-.copyright-link { color: #aaa; text-decoration: none; transition: color 0.15s; }
+.footer-license { display: inline-flex; align-items: center; color: var(--text-muted); }
+.footer-sep { color: var(--text-secondary); }
+.footer-copyright { color: var(--text-muted); }
+.copyright-link { color: var(--text-secondary); text-decoration: none; transition: color 0.15s; }
 .copyright-link:hover { color: #41b883; }
 
 </style>

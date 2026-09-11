@@ -21,35 +21,35 @@ from cli.utils import ensure_input_file, add_common_args
 
 
 def _convert_sql(input_file: str, output: str, encoding: str, cmd_type: str):
-    from converters.sql_to_mml import convert_sql_file
+    from ..converters.sql_to_mml import convert_sql_file
 
     dataset = convert_sql_file(input_file, output, cmd_type, encoding)
     return dataset.total_count
 
 
 def _convert_json(input_file: str, output: str, encoding: str):
-    from converters.json_to_mml import convert_json_to_mml
+    from ..converters.json_to_mml import convert_json_to_mml
 
     result = convert_json_to_mml(input_file, output, encoding)
     return result["total"]
 
 
 def _convert_csv(input_file: str, output: str, cmd_type: str):
-    from converters.csv_to_mml import convert_to_mml
+    from ..converters.csv_to_mml import convert_to_mml
 
     result = convert_to_mml(input_file, output, cmd_type)
     return result["total"]
 
 
 def _convert_xls(input_file: str, output: str):
-    from converters.xls_to_mml import convert_xls_to_mml
+    from ..converters.xls_to_mml import convert_xls_to_mml
 
     result = convert_xls_to_mml(input_file, output)
     return result["total"]
 
 
 def _convert_tabular(input_file: str, output_dir: str, cmd_type: str, table: str):
-    from converters.tabular_to_mml import convert_excel, convert_csv
+    from ..converters.tabular_to_mml import convert_excel, convert_csv
 
     ext = os.path.splitext(input_file)[1].lower()
     if ext in (".xlsx", ".xls"):

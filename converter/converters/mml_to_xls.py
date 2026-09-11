@@ -5,7 +5,7 @@ import os
 import csv
 from typing import Dict, List, Set, Optional
 
-from converters.mml_to_sql import parse_mml_file, sort_configs_by_values
+from .mml_to_sql import parse_mml_file, sort_configs_by_values
 
 
 def convert_file_to_excel_and_csv(

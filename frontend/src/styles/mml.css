@@ -1,0 +1,46 @@
+/* Shared MML action hierarchy, including teleported dialogs. */
+.mml-ui {
+  --el-color-primary: #3eaf7c;
+  --el-color-primary-light-3: #65bf96;
+  --el-color-primary-light-5: #8ed1b3;
+  --el-color-primary-light-7: #b9e3cf;
+  --el-color-primary-light-8: #d0ece0;
+  --el-color-primary-light-9: #e8f6ef;
+  --el-color-primary-dark-2: #328c63;
+}
+.mml-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.mml-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.mml-row-actions { display: flex; justify-content: flex-end; gap: 8px; white-space: nowrap; }
+.mml-search { width: 320px; max-width: 100%; }
+.mml-ui .el-button {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.mml-ui .el-button + .el-button { margin-left: 0; }
+.mml-ui .el-button:not([class*="el-button--"]) {
+  color: var(--text-primary);
+  border-color: var(--el-border-color);
+  background: var(--bg-secondary);
+}
+.mml-ui .el-button:not([class*="el-button--"]):hover:not(:disabled) {
+  color: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  background: var(--hover-bg);
+}
+.mml-ui .el-button--primary { background: var(--el-color-primary); border-color: var(--el-color-primary); color: #fff; }
+.mml-ui .el-button--primary:hover:not(:disabled) { background: var(--el-color-primary-dark-2); border-color: var(--el-color-primary-dark-2); }
+.mml-ui .el-button--danger.is-plain { color: var(--el-color-danger); border-color: var(--el-color-danger-light-5); background: var(--el-color-danger-light-9); }
+.mml-ui .el-button--danger.is-plain:hover:not(:disabled) { background: var(--el-color-danger); border-color: var(--el-color-danger); color: #fff; }
+.mml-ui .el-button.is-disabled, .mml-ui .el-button.is-disabled:hover {
+  color: var(--el-text-color-disabled);
+  border-color: var(--el-border-color-light);
+  background: var(--el-fill-color-light);
+  cursor: not-allowed;
+}
+.mml-ui .el-button--small { height: 28px; padding: 0 10px; font-size: 12px; }
+.mml-ui .el-dialog__footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding-top: 16px; }
+.mml-ui .filter-card > .el-card__body, .mml-ui .batch-toolbar > .el-card__body { padding: 16px; }
+.mml-ui .el-button:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 2px; }
