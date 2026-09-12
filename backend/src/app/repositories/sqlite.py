@@ -7,6 +7,7 @@
 import os
 import sqlite3
 import json
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 
 from ..core.config import get_settings
@@ -30,10 +31,12 @@ class DatabaseConnection:
         self.conn = None
 
     def __enter__(self):
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         # 每次会话设置 pragma
-        self.conn.execute("PRAGMA foreign_keys = OFF;")
+        self.conn.execute("PRAGMA foreign_keys = ON;")
+        self.conn.execute("PRAGMA busy_timeout = 5000;")
         return self.conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -66,6 +69,330 @@ def init_db(db_path: str = None) -> str:
         """
         )
     return f"[OK] 数据库已初始化: {get_db_path()}"
+
+
+# ============================================================
+#  Configuration-set persistence
+# ============================================================
+
+
+def init_snapshot_schema(db_path: str = None) -> None:
+    """Create the normalized schema used by the web application's imports."""
+    with DatabaseConnection(db_path=db_path) as db:
+        db.execute("PRAGMA journal_mode = WAL;")
+        db.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS _mml_snapshots (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                network_element TEXT NOT NULL,
+                loaded_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS _mml_snapshot_tables (
+                snapshot_id TEXT NOT NULL,
+                table_name TEXT NOT NULL,
+                columns_json TEXT NOT NULL,
+                row_count INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (snapshot_id, table_name),
+                FOREIGN KEY (snapshot_id) REFERENCES _mml_snapshots(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS _mml_snapshot_rows (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                snapshot_id TEXT NOT NULL,
+                table_name TEXT NOT NULL,
+                cmd_type TEXT NOT NULL,
+                values_json TEXT NOT NULL,
+                FOREIGN KEY (snapshot_id, table_name)
+                    REFERENCES _mml_snapshot_tables(snapshot_id, table_name) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS _idx_mml_rows_snapshot_table
+                ON _mml_snapshot_rows(snapshot_id, table_name, id);
+            CREATE TABLE IF NOT EXISTS _mml_state (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            );
+            """
+        )
+
+
+def insert_snapshot(snapshot_id: str, name: str, network_element: str, loaded_at: str, tables: Dict) -> None:
+    """Atomically persist one import in batches and make it active."""
+    init_snapshot_schema()
+    with DatabaseConnection() as db:
+        db.execute(
+            "INSERT INTO _mml_snapshots(id, name, network_element, loaded_at) VALUES (?, ?, ?, ?)",
+            (snapshot_id, name, network_element, loaded_at),
+        )
+        for table_name, commands in tables.items():
+            columns = sorted({key for command in commands for key in command["values"]})
+            db.execute(
+                "INSERT INTO _mml_snapshot_tables(snapshot_id, table_name, columns_json, row_count) "
+                "VALUES (?, ?, ?, ?)",
+                (snapshot_id, table_name, json.dumps(columns, ensure_ascii=False), len(commands)),
+            )
+            sql = (
+                "INSERT INTO _mml_snapshot_rows(snapshot_id, table_name, cmd_type, values_json) " "VALUES (?, ?, ?, ?)"
+            )
+            batch = []
+            for command in commands:
+                batch.append(
+                    (snapshot_id, table_name, command["cmd_type"], json.dumps(command["values"], ensure_ascii=False))
+                )
+                if len(batch) >= 2000:
+                    db.executemany(sql, batch)
+                    batch.clear()
+            if batch:
+                db.executemany(sql, batch)
+        db.execute(
+            "INSERT INTO _mml_state(key, value) VALUES ('active_snapshot_id', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (snapshot_id,),
+        )
+
+
+def insert_snapshot_stream(
+    snapshot_id: str, name: str, network_element: str, loaded_at: str, commands
+) -> Tuple[List[str], int]:
+    """Atomically persist an iterator of parsed commands in bounded batches."""
+    init_snapshot_schema()
+    columns_by_table: Dict[str, set] = {}
+    counts: Dict[str, int] = {}
+    total = 0
+    sql = "INSERT INTO _mml_snapshot_rows(snapshot_id, table_name, cmd_type, values_json) " "VALUES (?, ?, ?, ?)"
+    with DatabaseConnection() as db:
+        db.execute(
+            "INSERT INTO _mml_snapshots(id, name, network_element, loaded_at) VALUES (?, ?, ?, ?)",
+            (snapshot_id, name, network_element, loaded_at),
+        )
+        batch = []
+        for command in commands:
+            table_name = command["table"]
+            if table_name not in columns_by_table:
+                columns_by_table[table_name] = set()
+                counts[table_name] = 0
+                db.execute(
+                    "INSERT INTO _mml_snapshot_tables(snapshot_id, table_name, columns_json, row_count) "
+                    "VALUES (?, ?, '[]', 0)",
+                    (snapshot_id, table_name),
+                )
+            columns_by_table[table_name].update(command["values"])
+            counts[table_name] += 1
+            total += 1
+            batch.append(
+                (
+                    snapshot_id,
+                    table_name,
+                    command["cmd_type"],
+                    json.dumps(command["values"], ensure_ascii=False),
+                )
+            )
+            if len(batch) >= 2000:
+                db.executemany(sql, batch)
+                batch.clear()
+        if batch:
+            db.executemany(sql, batch)
+        if not total:
+            raise ValueError("未找到有效的MML命令")
+        for table_name, columns in columns_by_table.items():
+            db.execute(
+                "UPDATE _mml_snapshot_tables SET columns_json=?, row_count=? " "WHERE snapshot_id=? AND table_name=?",
+                (json.dumps(sorted(columns), ensure_ascii=False), counts[table_name], snapshot_id, table_name),
+            )
+        db.execute(
+            "INSERT INTO _mml_state(key, value) VALUES ('active_snapshot_id', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (snapshot_id,),
+        )
+    return list(columns_by_table), total
+
+
+def list_snapshots_persistent() -> Tuple[List[Dict], Optional[str]]:
+    init_snapshot_schema()
+    with DatabaseConnection() as db:
+        rows = db.execute(
+            "SELECT s.*, COALESCE(SUM(t.row_count), 0) AS command_count, COUNT(t.table_name) AS table_count "
+            "FROM _mml_snapshots s LEFT JOIN _mml_snapshot_tables t ON t.snapshot_id=s.id "
+            "GROUP BY s.id ORDER BY s.loaded_at DESC, s.rowid DESC"
+        ).fetchall()
+        active = db.execute("SELECT value FROM _mml_state WHERE key='active_snapshot_id'").fetchone()
+        return [dict(row) for row in rows], active["value"] if active else None
+
+
+def activate_snapshot_persistent(snapshot_id: str) -> Optional[Dict]:
+    init_snapshot_schema()
+    with DatabaseConnection() as db:
+        row = db.execute("SELECT * FROM _mml_snapshots WHERE id=?", (snapshot_id,)).fetchone()
+        if not row:
+            return None
+        db.execute(
+            "INSERT INTO _mml_state(key, value) VALUES ('active_snapshot_id', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (snapshot_id,),
+        )
+        return dict(row)
+
+
+def delete_snapshot_persistent(snapshot_id: str) -> Optional[Dict]:
+    """Delete a complete configuration set and select a safe active fallback."""
+    init_snapshot_schema()
+    with DatabaseConnection() as db:
+        row = db.execute("SELECT * FROM _mml_snapshots WHERE id=?", (snapshot_id,)).fetchone()
+        if not row:
+            return None
+        active = db.execute("SELECT value FROM _mml_state WHERE key='active_snapshot_id'").fetchone()
+        db.execute("DELETE FROM _mml_snapshots WHERE id=?", (snapshot_id,))
+
+        active_id = active["value"] if active else None
+        if active_id == snapshot_id:
+            fallback = db.execute(
+                "SELECT id FROM _mml_snapshots ORDER BY loaded_at DESC, rowid DESC LIMIT 1"
+            ).fetchone()
+            active_id = fallback["id"] if fallback else None
+            if active_id:
+                db.execute(
+                    "INSERT INTO _mml_state(key, value) VALUES ('active_snapshot_id', ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    (active_id,),
+                )
+            else:
+                db.execute("DELETE FROM _mml_state WHERE key='active_snapshot_id'")
+
+        result = dict(row)
+        result["active_id"] = active_id
+        return result
+
+
+def get_snapshot_tables(snapshot_id: str) -> List[Dict]:
+    init_snapshot_schema()
+    with DatabaseConnection() as db:
+        rows = db.execute(
+            "SELECT table_name, columns_json, row_count FROM _mml_snapshot_tables "
+            "WHERE snapshot_id=? ORDER BY table_name COLLATE NOCASE",
+            (snapshot_id,),
+        ).fetchall()
+        return [
+            {"table_name": row["table_name"], "columns": json.loads(row["columns_json"]), "count": row["row_count"]}
+            for row in rows
+        ]
+
+
+def query_snapshot_rows(
+    snapshot_id: str,
+    table_name: str,
+    page: int,
+    page_size: int,
+    sort_by: str | None,
+    sort_order: str,
+) -> Tuple[List[Dict], int]:
+    """Query a bounded page. JSON fields are sorted in SQLite when requested."""
+    offset = (page - 1) * page_size
+    order = "DESC" if sort_order.lower() == "desc" else "ASC"
+    order_clause = "id ASC"
+    params: list[Any] = [snapshot_id, table_name]
+    if sort_by:
+        order_clause = f"json_extract(values_json, ?) {order}, id {order}"
+        params.append(f'$."{sort_by.replace(chr(34), chr(34) * 2)}"')
+    params.extend([page_size, offset])
+    with DatabaseConnection() as db:
+        total = db.execute(
+            "SELECT row_count FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+            (snapshot_id, table_name),
+        ).fetchone()
+        if not total:
+            raise ValueError(f"表 {table_name} 不存在")
+        rows = db.execute(
+            f"SELECT id, cmd_type, values_json FROM _mml_snapshot_rows "
+            f"WHERE snapshot_id=? AND table_name=? ORDER BY {order_clause} LIMIT ? OFFSET ?",
+            params,
+        ).fetchall()
+        return [
+            {"id": row["id"], "cmd_type": row["cmd_type"], "values": json.loads(row["values_json"])} for row in rows
+        ], total["row_count"]
+
+
+def query_snapshot_row(snapshot_id: str, table_name: str, row_id: int) -> Optional[Dict]:
+    with DatabaseConnection() as db:
+        row = db.execute(
+            "SELECT id, cmd_type, values_json FROM _mml_snapshot_rows " "WHERE snapshot_id=? AND table_name=? AND id=?",
+            (snapshot_id, table_name, row_id),
+        ).fetchone()
+        return {"id": row["id"], "cmd_type": row["cmd_type"], "values": json.loads(row["values_json"])} if row else None
+
+
+def query_all_snapshot_rows(snapshot_id: str, table_name: str) -> List[Dict]:
+    with DatabaseConnection() as db:
+        rows = db.execute(
+            "SELECT id, cmd_type, values_json FROM _mml_snapshot_rows "
+            "WHERE snapshot_id=? AND table_name=? ORDER BY id",
+            (snapshot_id, table_name),
+        ).fetchall()
+        return [
+            {"id": row["id"], "cmd_type": row["cmd_type"], "values": json.loads(row["values_json"])} for row in rows
+        ]
+
+
+def insert_snapshot_row(snapshot_id: str, table_name: str, cmd_type: str, values: Dict) -> int:
+    with DatabaseConnection() as db:
+        table = db.execute(
+            "SELECT columns_json FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+            (snapshot_id, table_name),
+        ).fetchone()
+        if not table:
+            raise ValueError(f"表 {table_name} 不存在")
+        columns = sorted(set(json.loads(table["columns_json"])) | set(values))
+        cursor = db.execute(
+            "INSERT INTO _mml_snapshot_rows(snapshot_id, table_name, cmd_type, values_json) VALUES (?, ?, ?, ?)",
+            (snapshot_id, table_name, cmd_type, json.dumps(values, ensure_ascii=False)),
+        )
+        db.execute(
+            "UPDATE _mml_snapshot_tables SET columns_json=?, row_count=row_count+1 "
+            "WHERE snapshot_id=? AND table_name=?",
+            (json.dumps(columns, ensure_ascii=False), snapshot_id, table_name),
+        )
+        return cursor.lastrowid
+
+
+def update_snapshot_row(snapshot_id: str, table_name: str, row_id: int, values: Dict) -> bool:
+    with DatabaseConnection() as db:
+        table = db.execute(
+            "SELECT columns_json FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+            (snapshot_id, table_name),
+        ).fetchone()
+        if not table:
+            raise ValueError(f"表 {table_name} 不存在")
+        cursor = db.execute(
+            "UPDATE _mml_snapshot_rows SET values_json=? WHERE snapshot_id=? AND table_name=? AND id=?",
+            (json.dumps(values, ensure_ascii=False), snapshot_id, table_name, row_id),
+        )
+        if cursor.rowcount:
+            columns = sorted(set(json.loads(table["columns_json"])) | set(values))
+            db.execute(
+                "UPDATE _mml_snapshot_tables SET columns_json=? WHERE snapshot_id=? AND table_name=?",
+                (json.dumps(columns, ensure_ascii=False), snapshot_id, table_name),
+            )
+        return cursor.rowcount > 0
+
+
+def delete_snapshot_rows(snapshot_id: str, table_name: str, row_ids: List[int]) -> int:
+    if not row_ids:
+        return 0
+    with DatabaseConnection() as db:
+        deleted = 0
+        # Stay below SQLite's host-parameter limit for large selections.
+        for start in range(0, len(row_ids), 500):
+            chunk = row_ids[start : start + 500]
+            placeholders = ",".join("?" for _ in chunk)
+            cursor = db.execute(
+                f"DELETE FROM _mml_snapshot_rows WHERE snapshot_id=? AND table_name=? AND id IN ({placeholders})",
+                [snapshot_id, table_name, *chunk],
+            )
+            deleted += cursor.rowcount
+        if deleted:
+            db.execute(
+                "UPDATE _mml_snapshot_tables SET row_count=row_count-? WHERE snapshot_id=? AND table_name=?",
+                (deleted, snapshot_id, table_name),
+            )
+        return deleted
 
 
 def get_all_meta_tables() -> List[Dict]:

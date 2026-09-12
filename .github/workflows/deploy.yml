@@ -70,9 +70,8 @@ jobs:
           # 移除 venv 和 pycache
           rm -rf deploy/backend/.venv
           find deploy/backend -type d -name __pycache__ -prune -exec rm -rf {} +
-          # 脚本
-          mkdir -p deploy/scripts
-          cp scripts/run.sh deploy/scripts/
+          # 启动脚本
+          cp run.sh deploy/
           # 元信息
           echo "${{ github.sha }}" > deploy/VERSION
           echo "${{ github.ref_name }}" > deploy/BRANCH

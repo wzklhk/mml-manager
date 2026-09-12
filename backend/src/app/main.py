@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api.routes import api
 from .core.config import load_config
+from .repositories.sqlite import init_snapshot_schema
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 frontend = APIRouter()
@@ -21,11 +22,12 @@ frontend = APIRouter()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     load_config()
+    init_snapshot_schema()
     yield
 
 
 def create_app() -> FastAPI:
-    """Build the ASGI application and keep wiring out of module side effects."""
+    """Build the ASGI application and register the current API routes."""
     application = FastAPI(title="MML Manager API", lifespan=lifespan)
     application.add_middleware(
         CORSMiddleware,

@@ -2,13 +2,20 @@
 # 路径解析规则：相对路径相对于本文件所在目录
 
 server:
-  host: 0.0.0.0
+  host: localhost
   port: 5000
   debug: true
 
 database:
   # 数据库文件路径（相对路径基于 config.yaml 所在目录）
   path: ../../../../data/mml_config.db
+
+cache:
+  # 仅缓存表摘要、分页和单行数据；整份配置始终以 SQLite 为准。
+  max_entries: 512
+  max_bytes: 67108864
+  max_value_bytes: 2097152
+  max_page_size: 500
 
 logging:
   level: INFO

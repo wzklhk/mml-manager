@@ -31,6 +31,12 @@ DEFAULTS: Dict[str, Any] = {
     "database": {
         "path": str(PROJECT_ROOT / "data" / "mml_config.db"),
     },
+    "cache": {
+        "max_entries": 512,
+        "max_bytes": 64 * 1024 * 1024,
+        "max_value_bytes": 2 * 1024 * 1024,
+        "max_page_size": 500,
+    },
     "logging": {
         "level": "INFO",
     },

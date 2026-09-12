@@ -24,9 +24,18 @@
           <el-button type="danger" plain :disabled="selectedRows.length === 0" @click="$emit('batch-delete')">{{
             $t("detail.batch_delete")
           }}</el-button>
-          <el-button :disabled="selectedRows.length === 0" @click="$emit('batch-export')">{{
-            $t("detail.batch_export")
-          }}</el-button>
+          <el-dropdown :disabled="selectedRows.length === 0" @command="$emit('batch-export', $event)">
+            <el-button :disabled="selectedRows.length === 0">
+              {{ $t("detail.batch_export") }}<i class="el-icon-arrow-down el-icon--right"></i>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="mml">MML</el-dropdown-item>
+                <el-dropdown-item command="csv">CSV</el-dropdown-item>
+                <el-dropdown-item command="xlsx">Excel (.xlsx)</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.batch_add") }}</el-button>
         </div>
       </div>

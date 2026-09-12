@@ -4,12 +4,17 @@
 处理 MML 导入/导出/CRUD 的业务规则。
 """
 
+import csv
+import codecs
+import io
 import json
 import os
+import re
+import zipfile
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
-from ..mml_parser import parse_mml_text
+from ..mml_parser import parse_mml_stream, parse_mml_text
 from ..utils.mml import format_mml_command
 from .memory_store import store
 
@@ -24,6 +29,8 @@ KEY_FIELD_CANDIDATES = (
     "DN",
     "OBJECTID",
 )
+
+EXPORT_FORMATS = {"mml", "csv", "xlsx"}
 
 
 def decode_mml_bytes(content: bytes) -> str:
@@ -142,19 +149,39 @@ def compare_mml_texts(baseline_text: str, target_text: str) -> Dict:
 
 
 def import_mml_file(file_path: str) -> Dict:
-    """Parse a file into the active in-memory snapshot."""
-    return import_mml_text(_read_mml_text(file_path), os.path.basename(file_path))
+    """Parse a file into a persistent configuration set and make it active."""
+    with open(file_path, "rb") as handle:
+        return import_mml_stream(handle, os.path.basename(file_path))
 
 
-def import_mml_text(text: str, name: str = "未命名配置") -> Dict:
-    """Parse text, add a named snapshot, and make it active."""
+def import_mml_stream(binary_stream, name: str, network_element: str | None = None) -> Dict:
+    """Decode, parse and persist an MML stream with bounded working memory."""
+    last_error = None
+    for encoding in ("utf-8-sig", "gb18030"):
+        binary_stream.seek(0)
+        reader = codecs.getreader(encoding)(binary_stream, errors="strict")
+        try:
+            snapshot, table_names = store.add_snapshot_stream(parse_mml_stream(reader), name, network_element)
+            return {
+                "message": f"成功解析并持久化 {snapshot['command_count']} 条配置",
+                "tables": table_names,
+                "total_count": snapshot["command_count"],
+                "snapshot": snapshot,
+            }
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    raise ValueError("文件编码无法识别，请使用 UTF-8 或 GB18030 编码") from last_error
+
+
+def import_mml_text(text: str, name: str = "未命名配置", network_element: str | None = None) -> Dict:
+    """Parse text, persist an isolated configuration set, and make it active."""
     tables = _parse_mml_text(text)
     total_count = sum(len(commands) for commands in tables.values())
     if not total_count:
         return {"error": "未找到有效的MML命令"}
-    snapshot = store.add_snapshot(tables, name)
+    snapshot = store.add_snapshot(tables, name, network_element)
     return {
-        "message": f"成功解析 {total_count} 条配置到内存",
+        "message": f"成功解析并持久化 {total_count} 条配置",
         "tables": list(tables),
         "total_count": total_count,
         "snapshot": snapshot,
@@ -170,11 +197,20 @@ def activate_snapshot(snapshot_id: str) -> Dict:
     return store.activate(snapshot_id)
 
 
+def delete_snapshot(snapshot_id: str) -> Dict:
+    return store.delete_snapshot(snapshot_id)
+
+
 def get_tables_summary() -> List[Dict]:
-    tables, loaded_at = store.snapshot()
+    tables, loaded_at = store.table_summaries()
     return [
-        {"table_name": name, "columns": table["columns"], "count": len(table["rows"]), "created_at": loaded_at or ""}
-        for name, table in sorted(tables.items(), key=lambda item: item[0].casefold())
+        {
+            "table_name": table["table_name"],
+            "columns": table["columns"],
+            "count": table["count"],
+            "created_at": loaded_at or "",
+        }
+        for table in tables
     ]
 
 
@@ -190,27 +226,14 @@ def get_configs(
     if not table_name:
         return {"configs": [], "total": 0, "page": 1, "page_size": page_size, "total_pages": 1}
 
-    tables, loaded_at = store.snapshot()
-    if table_name not in tables:
-        raise ValueError(f"表 {table_name} 不存在")
-    table = tables[table_name]
+    table, loaded_at = store.table_info(table_name)
     columns = table["columns"]
     if not sort_by:
         # 默认按网元对象标识排序，避免导入顺序不同导致页面与导出结果难以核对。
         sort_by = next((field for field in KEY_FIELD_CANDIDATES if field in columns), None)
-    rows = table["rows"]
-    if sort_by in columns:
-
-        def sort_value(row):
-            value = row["values"].get(sort_by)
-            try:
-                return value is None, 0, float(value)
-            except (TypeError, ValueError):
-                return value is None, 1, str(value or "").casefold()
-
-        rows.sort(key=sort_value, reverse=sort_order.lower() == "desc")
-    total = len(rows)
-    start = max(0, (page - 1) * page_size)
+    rows, total = store.query_page(table_name, page, page_size, sort_by, sort_order)
+    page = max(1, int(page))
+    page_size = max(1, min(int(page_size), store.max_page_size))
     configs = [
         {
             "id": row["id"],
@@ -220,7 +243,7 @@ def get_configs(
             "created_at": loaded_at or "",
             "updated_at": loaded_at or "",
         }
-        for row in rows[start : start + page_size]
+        for row in rows
     ]
     total_pages = max(1, (total + page_size - 1) // page_size)
     return {
@@ -233,11 +256,8 @@ def get_configs(
 
 
 def get_config(table_name: str, config_id: int) -> Optional[Dict]:
-    tables, loaded_at = store.snapshot()
-    if table_name not in tables:
-        raise ValueError(f"表 {table_name} 不存在")
-    table = tables[table_name]
-    row = next((item for item in table["rows"] if item["id"] == config_id), None)
+    _, loaded_at = store.table_info(table_name)
+    row = store.get(table_name, config_id)
     return (
         None
         if row is None
@@ -266,6 +286,152 @@ def delete_config(table_name: str, config_id: int) -> bool:
 
 def batch_delete_configs(table_name: str, ids: List[int]) -> int:
     return store.delete(table_name, ids)
+
+
+def _select_export_tables(table_name: Optional[str] = None, ids: Optional[List[int]] = None) -> Dict:
+    """Return the requested tables/rows from the active snapshot."""
+    tables, _ = store.snapshot()
+    if table_name:
+        if table_name not in tables:
+            raise ValueError(f"表 {table_name} 不存在")
+        tables = {table_name: tables[table_name]}
+    elif ids is not None:
+        raise ValueError("导出选中配置时必须指定 table_name")
+
+    if ids is not None:
+        wanted = set(ids)
+        selected_rows = [row for row in tables[table_name]["rows"] if row["id"] in wanted]
+        tables[table_name]["rows"] = selected_rows
+
+    tables = {name: table for name, table in tables.items() if table["rows"]}
+    if not tables:
+        raise ValueError("没有可导出的配置")
+    return tables
+
+
+def _safe_file_stem(name: str) -> str:
+    stem = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name).strip(" .")
+    return stem or "config"
+
+
+def _unique_names(names: List[str], max_length: Optional[int] = None) -> List[str]:
+    result = []
+    used = set()
+    for name in names:
+        base = name[:max_length] if max_length else name
+        candidate = base
+        index = 2
+        while candidate.casefold() in used:
+            suffix = f"_{index}"
+            candidate = f"{base[: max_length - len(suffix)]}{suffix}" if max_length else f"{base}{suffix}"
+            index += 1
+        used.add(candidate.casefold())
+        result.append(candidate)
+    return result
+
+
+def _csv_bytes(table: Dict) -> bytes:
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=table["columns"], extrasaction="ignore")
+    writer.writeheader()
+    for row in table["rows"]:
+        writer.writerow({column: row["values"].get(column, "") for column in table["columns"]})
+    return output.getvalue().encode("utf-8-sig")
+
+
+def _export_csv(tables: Dict, selected: bool, timestamp: str) -> Dict:
+    if len(tables) == 1:
+        table_name, table = next(iter(tables.items()))
+        suffix = "_selected" if selected else ""
+        return {
+            "content": _csv_bytes(table),
+            "filename": f"{_safe_file_stem(table_name)}{suffix}_{timestamp}.csv",
+            "media_type": "text/csv; charset=utf-8",
+        }
+
+    output = io.BytesIO()
+    table_names = sorted(tables, key=str.casefold)
+    file_names = _unique_names([_safe_file_stem(name) for name in table_names])
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for table_name, file_name in zip(table_names, file_names):
+            archive.writestr(f"{file_name}.csv", _csv_bytes(tables[table_name]))
+    return {
+        "content": output.getvalue(),
+        "filename": f"configs_csv_{timestamp}.zip",
+        "media_type": "application/zip",
+    }
+
+
+def _export_excel(tables: Dict, selected: bool, timestamp: str) -> Dict:
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+    table_names = sorted(tables, key=str.casefold)
+    sheet_names = _unique_names(
+        [(re.sub(r"[\[\]:*?/\\]", "_", name).strip("'") or "Config") for name in table_names],
+        max_length=31,
+    )
+    header_fill = PatternFill(fill_type="solid", fgColor="4472C4")
+    header_font = Font(bold=True, color="FFFFFF")
+
+    for table_name, sheet_name in zip(table_names, sheet_names):
+        table = tables[table_name]
+        sheet = workbook.create_sheet(sheet_name)
+        for column_index, column in enumerate(table["columns"], 1):
+            cell = sheet.cell(row=1, column=column_index, value=column)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+        for row_index, row in enumerate(table["rows"], 2):
+            for column_index, column in enumerate(table["columns"], 1):
+                cell = sheet.cell(row=row_index, column=column_index, value=str(row["values"].get(column, "") or ""))
+                cell.data_type = "s"
+        sheet.freeze_panes = "A2"
+        sheet.auto_filter.ref = sheet.dimensions
+        for column_index, column in enumerate(table["columns"], 1):
+            values = [column] + [str(row["values"].get(column, "") or "") for row in table["rows"][:100]]
+            sheet.column_dimensions[get_column_letter(column_index)].width = min(max(map(len, values)) + 2, 50)
+
+    output = io.BytesIO()
+    workbook.save(output)
+    suffix = "_selected" if selected else ""
+    return {
+        "content": output.getvalue(),
+        "filename": f"configs{suffix}_{timestamp}.xlsx",
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+
+
+def export_configurations(
+    export_format: str, table_name: Optional[str] = None, ids: Optional[List[int]] = None
+) -> Dict:
+    """Export selected rows, one table, or the full active snapshot."""
+    export_format = (export_format or "").lower()
+    if export_format not in EXPORT_FORMATS:
+        raise ValueError("导出格式只支持 mml、csv 或 xlsx")
+    if ids is not None and not ids:
+        raise ValueError("没有选中要导出的配置")
+
+    tables = _select_export_tables(table_name, ids)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if export_format == "mml":
+        result = export_selected_rows(table_name, ids) if ids is not None else export_mml(table_name)
+        return {
+            "content": result["content"].encode("utf-8-sig"),
+            "filename": result["filename"],
+            "media_type": "text/plain; charset=utf-8",
+            "count": sum(len(table["rows"]) for table in tables.values()),
+        }
+    result = (
+        _export_csv(tables, ids is not None, timestamp)
+        if export_format == "csv"
+        else _export_excel(tables, ids is not None, timestamp)
+    )
+    result["count"] = sum(len(table["rows"]) for table in tables.values())
+    return result
 
 
 def export_selected_rows(table_name: str, ids: List[int]) -> Dict:

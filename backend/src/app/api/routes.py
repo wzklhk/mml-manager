@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """FastAPI 路由定义与 HTTP 请求/响应处理。"""
 
+import os
 from datetime import datetime
 from typing import Any
+from urllib.parse import quote
 
-from fastapi import APIRouter, File, Query, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, File, Form, Query, UploadFile
+from fastapi.responses import JSONResponse, Response
+from starlette.concurrency import run_in_threadpool
 
 from ..services import mml as mml_service
 
@@ -42,7 +45,10 @@ def health_check():
 
 
 @api.post("/import-mml")
-async def import_mml(file: UploadFile | None = File(default=None)):
+async def import_mml(
+    file: UploadFile | None = File(default=None),
+    network_element: str | None = Form(default=None),
+):
     if file is None:
         return _error("未上传文件", 400)
     if not file.filename:
@@ -50,11 +56,14 @@ async def import_mml(file: UploadFile | None = File(default=None)):
     if not _is_import_file(file):
         return _error("只支持 .mml 或 .txt 格式文件", 400)
     try:
-        content = await _read_upload(file)
-        result = mml_service.import_mml_text(mml_service.decode_mml_bytes(content), file.filename)
+        result = await run_in_threadpool(mml_service.import_mml_stream, file.file, file.filename, network_element)
         return JSONResponse(result, status_code=400) if "error" in result else result
+    except ValueError as exc:
+        return _error(str(exc), 400)
     except Exception as exc:
         return _error(f"导入失败: {exc}", 500)
+    finally:
+        await file.close()
 
 
 @api.post("/compare-mml")
@@ -87,10 +96,30 @@ def get_snapshots():
     return mml_service.get_snapshots()
 
 
+@api.get("/cache/stats")
+def get_cache_stats():
+    """Expose bounded-cache utilization for local diagnostics."""
+    return mml_service.store.cache_stats()
+
+
 @api.post("/snapshots/{snapshot_id}/activate")
 def activate_snapshot(snapshot_id: str):
     try:
         return {"snapshot": mml_service.activate_snapshot(snapshot_id)}
+    except ValueError as exc:
+        return _error(str(exc), 404)
+
+
+@api.delete("/snapshots/{snapshot_id}")
+@api.post("/snapshots/{snapshot_id}/delete")
+def delete_snapshot(snapshot_id: str):
+    try:
+        deleted = mml_service.delete_snapshot(snapshot_id)
+        return {
+            "message": "配置删除成功",
+            "deleted": deleted,
+            "active_id": deleted["active_id"],
+        }
     except ValueError as exc:
         return _error(str(exc), 404)
 
@@ -207,5 +236,32 @@ def export_mml(data: dict[str, Any] | None = None):
         return mml_service.export_selected_rows(table_name, ids) if ids else mml_service.export_mml(table_name)
     except ValueError as exc:
         return _error(str(exc), 404)
+    except Exception as exc:
+        return _error(f"导出失败: {exc}", 500)
+
+
+@api.post("/export")
+def export_configurations(data: dict[str, Any] | None = None):
+    data = data or {}
+    try:
+        result = mml_service.export_configurations(
+            data.get("format", ""),
+            data.get("table_name"),
+            data["ids"] if "ids" in data else None,
+        )
+        filename = result["filename"]
+        ascii_fallback = "export" + os.path.splitext(filename)[1]
+        disposition = f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(filename)}"
+        return Response(
+            content=result["content"],
+            media_type=result["media_type"],
+            headers={
+                "Content-Disposition": disposition,
+                "X-Export-Count": str(result["count"]),
+                "Access-Control-Expose-Headers": "Content-Disposition, X-Export-Count",
+            },
+        )
+    except ValueError as exc:
+        return _error(str(exc), 400)
     except Exception as exc:
         return _error(f"导出失败: {exc}", 500)

@@ -17,6 +17,18 @@
           />
         </div>
         <div class="mml-actions">
+          <el-dropdown :disabled="!canExport" @command="$emit('export-all', $event)">
+            <el-button :disabled="!canExport">
+              {{ $t("export.all") }}<i class="el-icon-arrow-down el-icon--right"></i>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="mml">MML</el-dropdown-item>
+                <el-dropdown-item command="csv">CSV</el-dropdown-item>
+                <el-dropdown-item command="xlsx">Excel (.xlsx)</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-button @click="$emit('refresh')">{{ $t("overview.refresh") }}</el-button>
         </div>
       </div>
@@ -66,6 +78,7 @@ export default {
   name: "TableOverview",
   props: {
     tables: { type: Array, default: () => [] },
+    canExport: { type: Boolean, default: false },
     modelValue: { type: String, default: "" },
     pagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },
   },
