@@ -1,7 +1,24 @@
 """MML text parser shared by the web service and file converters."""
 
+import json
 import re
-from typing import Dict, Iterable, List, Optional, TextIO
+from typing import Any, Dict, Iterable, List, Optional, TextIO
+
+
+def _reject_non_json_constant(value: str) -> None:
+    """Reject Python's non-standard JSON constants (NaN and Infinity)."""
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
+def _parse_unquoted_value(value: str) -> Any:
+    """Preserve JSON scalar types while accepting legacy bare MML strings."""
+    if value == "":
+        return None
+    try:
+        parsed = json.loads(value, parse_constant=_reject_non_json_constant)
+    except (json.JSONDecodeError, ValueError):
+        return value
+    return parsed if isinstance(parsed, (str, int, float, bool)) or parsed is None else value
 
 
 def split_commands(text: str) -> Iterable[str]:
@@ -87,9 +104,9 @@ def parse_mml_stream(stream: TextIO) -> Iterable[Dict]:
             yield parsed
 
 
-def parse_key_value_pairs(text: str) -> Dict[str, Optional[str]]:
-    """Parse comma-separated KEY=VALUE pairs with single or double quoted values."""
-    result: Dict[str, Optional[str]] = {}
+def parse_key_value_pairs(text: str) -> Dict[str, Any]:
+    """Parse values as JSON scalars, with compatibility for legacy MML strings."""
+    result: Dict[str, Any] = {}
     index = 0
     while index < len(text):
         while index < len(text) and (text[index].isspace() or text[index] == ","):
@@ -106,6 +123,7 @@ def parse_key_value_pairs(text: str) -> Dict[str, Optional[str]]:
 
         if index < len(text) and text[index] in ("'", '"'):
             quote = text[index]
+            value_start = index
             index += 1
             chars: List[str] = []
             while index < len(text):
@@ -117,22 +135,36 @@ def parse_key_value_pairs(text: str) -> Dict[str, Optional[str]]:
                         continue
                     index += 1
                     break
-                if char == "\\" and index + 1 < len(text) and text[index + 1] == quote:
-                    chars.append(quote)
-                    index += 2
-                    continue
+                if char == "\\" and index + 1 < len(text):
+                    if quote == '"':
+                        # Skip the complete JSON escape while locating the closing quote.
+                        chars.extend((char, text[index + 1]))
+                        index += 2
+                        continue
+                    if text[index + 1] == quote:
+                        chars.append(quote)
+                        index += 2
+                        continue
                 chars.append(char)
                 index += 1
-            value = "".join(chars)
+            raw_value = text[value_start:index]
+            if quote == '"':
+                try:
+                    value = json.loads(raw_value, parse_constant=_reject_non_json_constant)
+                except (json.JSONDecodeError, ValueError):
+                    # Continue to accept the older doubled-quote MML escaping style.
+                    value = "".join(chars)
+            else:
+                value = "".join(chars)
             while index < len(text) and text[index] != ",":
                 index += 1
         else:
             value_start = index
             while index < len(text) and text[index] != ",":
                 index += 1
-            value = text[value_start:index].strip()
+            value = _parse_unquoted_value(text[value_start:index].strip())
         if key:
-            result[key] = value if value != "" else None
+            result[key] = value
     return result
 
 

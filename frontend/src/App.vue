@@ -7,7 +7,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, provide, readonly, ref, watchEffect } from "vue";
+import { computed, provide, readonly, ref, watchEffect } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import zhCn from "element-plus/dist/locale/zh-cn.mjs";
@@ -21,20 +21,25 @@ watchEffect(() => {
 });
 const elementLocale = computed(() => (locale.value === "zh" ? zhCn : en));
 const isDark = ref(document.documentElement.classList.contains("dark"));
-let themeTransitionTimer;
+let themeSwitchFrame;
 
 function toggleTheme() {
   const root = document.documentElement;
-  clearTimeout(themeTransitionTimer);
-  root.classList.add("theme-transitioning");
-  void root.offsetWidth;
-  isDark.value = !isDark.value;
-  localStorage.setItem("theme", isDark.value ? "dark" : "light");
-  root.classList.toggle("dark", isDark.value);
-  root.style.colorScheme = isDark.value ? "dark" : "light";
-  themeTransitionTimer = setTimeout(() => {
-    root.classList.remove("theme-transitioning");
-  }, 280);
+  const nextIsDark = !isDark.value;
+
+  window.cancelAnimationFrame(themeSwitchFrame);
+  root.classList.add("theme-switching");
+  isDark.value = nextIsDark;
+  localStorage.setItem("theme", nextIsDark ? "dark" : "light");
+  root.classList.toggle("dark", nextIsDark);
+  root.style.colorScheme = nextIsDark ? "dark" : "light";
+
+  // Keep transitions disabled until the new theme has been painted once.
+  themeSwitchFrame = window.requestAnimationFrame(() => {
+    themeSwitchFrame = window.requestAnimationFrame(() => {
+      root.classList.remove("theme-switching");
+    });
+  });
 }
 
 function toggleLang() {
@@ -43,8 +48,4 @@ function toggleLang() {
 }
 
 provide("appearance", { isDark: readonly(isDark), toggleTheme, toggleLang });
-onBeforeUnmount(() => {
-  clearTimeout(themeTransitionTimer);
-  document.documentElement.classList.remove("theme-transitioning");
-});
 </script>

@@ -2,63 +2,36 @@
   <div class="sidebar-wrapper">
     <el-aside :width="collapsed ? '0' : '260px'" class="vue-aside">
       <div v-if="!collapsed" class="aside-content">
-        <!-- ====== Table list (overview mode) ====== -->
-        <template v-if="!selectedTable">
-          <div class="aside-header">
-            <h3 class="aside-title">
-              <i class="el-icon-menu" style="color: #41b883; margin-right: 6px"></i>
-              {{ $t("sidebar.tables_title") || "Tables" }}
-            </h3>
-          </div>
+        <div class="aside-header">
+          <h3 class="aside-title">
+            <i class="el-icon-menu" style="color: #41b883; margin-right: 6px"></i>
+            {{ $t("sidebar.tables_title") || "Tables" }}
+          </h3>
+        </div>
 
-          <div class="aside-section">
-            <div class="aside-table-list">
-              <div v-for="t in tables" :key="t.table_name" class="aside-table-item" @click="$emit('select-table', t)">
-                <i
-                  class="el-icon-s-data"
-                  style="color: #41b883; font-size: 14px; margin-right: 6px; flex-shrink: 0"
-                ></i>
-                <span class="table-item-name">{{ t.table_name }}</span>
-                <el-tag size="small" type="success" effect="dark" class="table-item-count">{{ t.count }}</el-tag>
-              </div>
-            </div>
-            <el-pagination
-              v-if="tablePagination.total > tablePagination.pageSize"
-              class="aside-pagination"
-              small
-              background
-              layout="prev, pager, next"
-              :pager-count="5"
-              :current-page="tablePagination.page"
-              :page-size="tablePagination.pageSize"
-              :total="tablePagination.total"
-              @current-change="$emit('table-page-change', $event)"
-            />
-          </div>
-        </template>
+        <el-input
+          v-model="tableSearch"
+          class="aside-table-search"
+          :placeholder="$t('sidebar.search_placeholder')"
+          clearable
+        />
 
-        <!-- ====== Column list (detail mode) ====== -->
-        <template v-else>
-          <div class="aside-header">
-            <h3 class="aside-title">
-              <i class="el-icon-s-grid" style="color: #41b883; margin-right: 6px"></i>
-              {{ selectedTable }}
-            </h3>
-            <div class="aside-header-actions">
-              <el-tag size="small" type="success" effect="dark">{{ totalRows }} {{ $t("sidebar.rows") }}</el-tag>
+        <div class="aside-section">
+          <div class="aside-table-list">
+            <div
+              v-for="t in filteredTables"
+              :key="t.table_name"
+              class="aside-table-item"
+              :class="{ active: t.table_name === selectedTable }"
+              :aria-current="t.table_name === selectedTable ? 'page' : undefined"
+              @click="$emit('select-table', t)"
+            >
+              <i class="el-icon-s-data" style="color: #41b883; font-size: 14px; margin-right: 6px; flex-shrink: 0"></i>
+              <span class="table-item-name">{{ t.table_name }}</span>
+              <el-tag size="small" type="success" effect="dark" class="table-item-count">{{ t.count }}</el-tag>
             </div>
           </div>
-
-          <div class="aside-section">
-            <div class="aside-section-title">{{ $t("sidebar.columns_title") }}</div>
-            <div class="aside-column-list">
-              <div v-for="col in columns" :key="col" class="aside-column-item">
-                <span class="col-dot"></span>
-                <span class="col-name">{{ col }}</span>
-              </div>
-            </div>
-          </div>
-        </template>
+        </div>
       </div>
     </el-aside>
 
@@ -82,10 +55,19 @@ export default {
   props: {
     selectedTable: { type: String, default: "" },
     tables: { type: Array, default: () => [] },
-    columns: { type: Array, default: () => [] },
-    totalRows: { type: Number, default: 0 },
-    tablePagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },
     collapsed: { type: Boolean, default: false },
+  },
+  data() {
+    return {
+      tableSearch: "",
+    };
+  },
+  computed: {
+    filteredTables() {
+      const query = this.tableSearch.trim().toLocaleLowerCase();
+      if (!query) return this.tables;
+      return this.tables.filter((table) => String(table.table_name).toLocaleLowerCase().includes(query));
+    },
   },
 };
 </script>
@@ -141,57 +123,15 @@ export default {
   white-space: nowrap;
 }
 
-.aside-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
 .aside-section {
   margin-bottom: 20px;
 }
-.aside-section-title {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-muted);
-  margin-bottom: 10px;
+
+.aside-table-search {
+  margin-bottom: 12px;
 }
 
-/* ---- Column list (detail mode) ---- */
-.aside-column-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.aside-column-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  transition: background 0.15s;
-}
-.aside-column-item:hover {
-  background: var(--hover-bg);
-}
-.col-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #41b883;
-  flex-shrink: 0;
-}
-.col-name {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 12.5px;
-}
-
-/* ---- Table list (overview mode) ---- */
+/* ---- Table list ---- */
 .aside-table-list {
   display: flex;
   flex-direction: column;
@@ -211,6 +151,11 @@ export default {
 .aside-table-item:hover {
   background: var(--hover-bg);
 }
+.aside-table-item.active {
+  color: #2f855a;
+  background: color-mix(in srgb, #41b883 14%, transparent);
+  box-shadow: inset 3px 0 0 #41b883;
+}
 .table-item-name {
   flex: 1;
   overflow: hidden;
@@ -225,11 +170,6 @@ export default {
   height: 18px !important;
   line-height: 18px !important;
 }
-.aside-pagination {
-  margin-top: 14px;
-  justify-content: center;
-}
-
 .sidebar-toggle-rail {
   flex: 0 0 28px;
   width: 28px;

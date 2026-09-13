@@ -1,6 +1,6 @@
 {
   "name": "mml-manager-frontend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MML配置管理前端",
   "private": true,
   "type": "module",

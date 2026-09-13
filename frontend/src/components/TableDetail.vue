@@ -36,14 +36,16 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.batch_add") }}</el-button>
+          <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.add_config") }}</el-button>
         </div>
       </div>
     </el-card>
 
     <el-card shadow="never" class="data-card">
       <el-table
+        ref="configTable"
         :data="configs"
+        row-key="id"
         style="width: 100%"
         v-loading="loading"
         border
@@ -52,7 +54,7 @@
         @sort-change="onSort"
         @selection-change="$emit('selection-change', $event)"
       >
-        <el-table-column type="selection" width="45" fixed="left" />
+        <el-table-column type="selection" width="45" fixed="left" reserve-selection />
         <el-table-column type="index" label="#" width="50" fixed="left" />
         <el-table-column
           v-for="col in displayedColumns"
@@ -169,6 +171,9 @@ export default {
     window.clearTimeout(this.filterTimer);
   },
   methods: {
+    clearSelection() {
+      this.$refs.configTable?.clearSelection();
+    },
     onSort({ prop, order }) {
       this.$emit("sort-change", { prop, order });
     },
