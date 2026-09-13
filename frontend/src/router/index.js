@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHashHistory } from "vue-router";
 import HomeLayout from "../layouts/HomeLayout.vue";
 import ModuleLayout from "../layouts/ModuleLayout.vue";
 import HomeView from "../views/Home/HomeView.vue";
@@ -21,6 +21,6 @@ export const routes = [
   { path: "/:pathMatch(.*)*", redirect: "/" },
 ];
 
-// Resource base (/static/) is independent of the application URL root.
-const router = createRouter({ history: createWebHistory("/"), routes });
+// Keep client-side routes after `#` so deployment does not require History API fallback.
+const router = createRouter({ history: createWebHashHistory(), routes });
 export default router;
