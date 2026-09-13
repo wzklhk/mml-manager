@@ -10,8 +10,17 @@
         :placeholder="$t('header.select_config')"
         @change="$emit('snapshot-change', $event)"
       >
-        <el-option v-for="item in snapshots" :key="item.id" :label="item.name" :value="item.id" />
+        <el-option v-for="item in snapshots" :key="item.id" :label="snapshotLabel(item)" :value="item.id" />
       </el-select>
+      <el-button
+        v-if="activeSnapshotId"
+        type="danger"
+        plain
+        size="default"
+        @click="$emit('snapshot-delete', activeSnapshotId)"
+      >
+        {{ $t("header.delete_config") }}
+      </el-button>
       <span v-if="selectedTable" class="selected-table-name">{{ selectedTable }}</span>
     </div>
     <div class="header-right">
@@ -50,6 +59,10 @@ export default {
     },
   },
   methods: {
+    snapshotLabel(item) {
+      const importedAt = item.loaded_at ? item.loaded_at.replace("T", " ").slice(0, 19) : "";
+      return [item.network_element, item.name, importedAt].filter(Boolean).join(" · ");
+    },
     beforeUpload(file) {
       if (![".mml", ".txt"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
         this.$message.error(this.$t("header.only_mml_file"));

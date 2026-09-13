@@ -1,5 +1,5 @@
 <template>
-  <div class="mml-query mml-ui">
+  <div class="mml-query mml-ui" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
     <VueHeader
       :menu-active="menuActive"
       :selected-table="selectedTable"
@@ -11,6 +11,7 @@
       @upload-error="handleUploadError"
       @compare="compareDialogVisible = true"
       @snapshot-change="switchSnapshot"
+      @snapshot-delete="deleteSnapshot"
       @logo-click="backToOverview"
     />
 
@@ -37,9 +38,11 @@
           v-show="!selectedTable"
           v-model="tableSearch"
           :tables="pagedTables"
+          :can-export="tables.length > 0"
           :pagination="tablePagination"
           @enter-table="enterTable"
           @refresh="loadTables"
+          @export-all="exportAll"
           @sort="handleOverviewSort"
           @page-change="handleTablePageChange"
           @size-change="handleTableSizeChange"
@@ -54,6 +57,7 @@
           :selected-rows="selectedRows"
           :pagination="pagination"
           @sort-change="handleSortChange"
+          @filter-change="handleFilterChange"
           @selection-change="handleSelectionChange"
           @page-change="handlePageChange"
           @size-change="handleSizeChange"
@@ -107,6 +111,7 @@ export default {
       isNewRow: false,
       editForm: {},
       sort: { prop: null, order: null },
+      columnFilters: {},
       uploading: false,
       compareDialogVisible: false,
     };
@@ -196,6 +201,32 @@ export default {
       }
     },
 
+    deleteSnapshot(snapshotId) {
+      const snapshot = this.snapshots.find((item) => item.id === snapshotId);
+      this.$confirm(
+        this.$t("confirm.delete_snapshot_content", { name: snapshot?.name || "" }),
+        this.$t("confirm.delete_snapshot_title"),
+        {
+          confirmButtonText: this.$t("confirm.btn_confirm"),
+          cancelButtonText: this.$t("confirm.btn_cancel"),
+          type: "warning",
+        },
+      )
+        .then(async () => {
+          try {
+            const response = await apiClient.post(`/api/snapshots/${snapshotId}/delete`);
+            this.activeSnapshotId = response.data.active_id || "";
+            this.backToOverview();
+            await this.loadSnapshots();
+            await this.loadTables();
+            this.$message.success(this.$t("msg.delete_snapshot_success"));
+          } catch (e) {
+            this.$message.error(this.$t("msg.delete_snapshot_fail", { msg: e.response?.data?.error || e.message }));
+          }
+        })
+        .catch(() => {});
+    },
+
     async loadTables() {
       try {
         const res = await apiClient.get("/api/tables");
@@ -211,6 +242,7 @@ export default {
       this.currentColumns = row.columns || [];
       this.pagination.page = 1;
       this.sort = { prop: null, order: null };
+      this.columnFilters = {};
       this.selectedRows = [];
       this.sidebarCollapsed = false;
       this.loadConfigs();
@@ -221,6 +253,7 @@ export default {
       this.currentColumns = [];
       this.configs = [];
       this.selectedRows = [];
+      this.columnFilters = {};
       this.sidebarCollapsed = false;
     },
 
@@ -228,6 +261,13 @@ export default {
       this.sort.prop = prop ? prop.replace("config_data.", "") : null;
       this.sort.order = order === "ascending" ? "asc" : order === "descending" ? "desc" : null;
       this.pagination.page = 1;
+      this.loadConfigs();
+    },
+
+    handleFilterChange(filters) {
+      this.columnFilters = filters;
+      this.pagination.page = 1;
+      this.selectedRows = [];
       this.loadConfigs();
     },
 
@@ -244,6 +284,7 @@ export default {
           params.sort_by = this.sort.prop;
           params.sort_order = this.sort.order;
         }
+        if (Object.keys(this.columnFilters).length) params.filters = JSON.stringify(this.columnFilters);
         const res = await apiClient.get("/api/configs", { params });
         this.configs = res.data.configs;
         this.pagination.total = res.data.total;
@@ -310,22 +351,49 @@ export default {
         .catch(() => {});
     },
 
-    async batchExport() {
-      if (!this.selectedRows.length) return;
+    async downloadExport(format, payload, successCount) {
       try {
-        const ids = this.selectedRows.map((r) => r.id);
-        const res = await apiClient.post("/api/export-mml", { table_name: this.selectedTable, ids });
-        const blob = new Blob([res.data.content], { type: "text/plain" });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = res.data.filename;
-        a.click();
+        const res = await apiClient.post("/api/export", { format, ...payload }, { responseType: "blob" });
+        const disposition = res.headers["content-disposition"] || "";
+        const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+        const plainName = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+        const filename = encodedName ? decodeURIComponent(encodedName) : plainName || `export.${format}`;
+        const url = window.URL.createObjectURL(res.data);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
         window.URL.revokeObjectURL(url);
-        this.$message.success(this.$t("msg.export_success", { count: ids.length }));
+        const count = Number(res.headers["x-export-count"]) || successCount;
+        this.$message.success(this.$t("msg.export_success", { count }));
       } catch (e) {
-        this.$message.error(this.$t("msg.export_fail", { msg: e.response?.data?.error || e.message }));
+        let msg = e.response?.data?.error || e.message;
+        if (e.response?.data instanceof Blob) {
+          try {
+            const error = JSON.parse(await e.response.data.text());
+            msg = error.error || msg;
+          } catch (_) {
+            // Keep the transport error when the response is not JSON.
+          }
+        }
+        this.$message.error(this.$t("msg.export_fail", { msg }));
       }
+    },
+
+    async batchExport(format) {
+      if (!this.selectedRows.length) return;
+      const ids = this.selectedRows.map((row) => row.id);
+      await this.downloadExport(format, { table_name: this.selectedTable, ids }, ids.length);
+    },
+
+    async exportAll(format) {
+      await this.downloadExport(
+        format,
+        {},
+        this.tables.reduce((total, table) => total + table.count, 0),
+      );
     },
 
     showAddRowDialog() {

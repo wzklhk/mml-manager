@@ -1,7 +1,7 @@
 """MML text parser shared by the web service and file converters."""
 
 import re
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, TextIO
 
 
 def split_commands(text: str) -> Iterable[str]:
@@ -32,6 +32,59 @@ def split_commands(text: str) -> Iterable[str]:
             index += 1
         else:
             position = len(text)
+
+
+def split_commands_stream(stream: TextIO, chunk_size: int = 1024 * 1024) -> Iterable[str]:
+    """Incrementally yield commands without retaining the complete input file."""
+    start_pattern = re.compile(r"(?im)(?:^|(?<=;))\s*(?:ADD|SET)\s+")
+    buffer = ""
+    eof = False
+    while not eof:
+        chunk = stream.read(chunk_size)
+        eof = not chunk
+        buffer += chunk
+        search_from = 0
+        while match := start_pattern.search(buffer, search_from):
+            start = match.start()
+            quote = None
+            index = match.end()
+            while index < len(buffer):
+                char = buffer[index]
+                if quote:
+                    if char == quote:
+                        if index + 1 < len(buffer) and buffer[index + 1] == quote:
+                            index += 2
+                            continue
+                        quote = None
+                    elif char == "\\" and index + 1 < len(buffer):
+                        index += 2
+                        continue
+                elif char in ("'", '"'):
+                    quote = char
+                elif char == ";":
+                    yield buffer[start : index + 1].strip()
+                    buffer = buffer[index + 1 :]
+                    search_from = 0
+                    break
+                index += 1
+            else:
+                # Retain only the incomplete command for the next read.
+                buffer = buffer[start:]
+                break
+        else:
+            if not eof:
+                # No command start is present. Keep enough tail for a start token
+                # split across chunks, plus text following the latest newline.
+                latest_line = buffer.rsplit("\n", 1)[-1]
+                buffer = latest_line[-32:]
+
+
+def parse_mml_stream(stream: TextIO) -> Iterable[Dict]:
+    """Parse a text stream one command at a time."""
+    for command in split_commands_stream(stream):
+        parsed = parse_any_command(command)
+        if parsed:
+            yield parsed
 
 
 def parse_key_value_pairs(text: str) -> Dict[str, Optional[str]]:

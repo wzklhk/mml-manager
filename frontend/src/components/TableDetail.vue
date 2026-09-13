@@ -24,9 +24,18 @@
           <el-button type="danger" plain :disabled="selectedRows.length === 0" @click="$emit('batch-delete')">{{
             $t("detail.batch_delete")
           }}</el-button>
-          <el-button :disabled="selectedRows.length === 0" @click="$emit('batch-export')">{{
-            $t("detail.batch_export")
-          }}</el-button>
+          <el-dropdown :disabled="selectedRows.length === 0" @command="$emit('batch-export', $event)">
+            <el-button :disabled="selectedRows.length === 0">
+              {{ $t("detail.batch_export") }}<i class="el-icon-arrow-down el-icon--right"></i>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="mml">MML</el-dropdown-item>
+                <el-dropdown-item command="csv">CSV</el-dropdown-item>
+                <el-dropdown-item command="xlsx">Excel (.xlsx)</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.batch_add") }}</el-button>
         </div>
       </div>
@@ -46,15 +55,46 @@
         <el-table-column type="selection" width="45" fixed="left" />
         <el-table-column type="index" label="#" width="50" fixed="left" />
         <el-table-column
-          v-for="col in columns"
+          v-for="col in displayedColumns"
           :key="col"
           :prop="'config_data.' + col"
           :label="col"
           sortable="custom"
           min-width="130"
+          :fixed="isPinned(col) ? 'left' : false"
         >
+          <template #header>
+            <div class="column-header">
+              <div class="column-title-row">
+                <span class="column-title" :title="col">{{ col }}</span>
+                <el-tooltip
+                  :content="isPinned(col) ? $t('detail.unpin_column') : $t('detail.pin_column')"
+                  placement="top"
+                >
+                  <button
+                    type="button"
+                    class="pin-button"
+                    :class="{ active: isPinned(col) }"
+                    :aria-label="isPinned(col) ? $t('detail.unpin_column') : $t('detail.pin_column')"
+                    @click.stop="togglePinnedColumn(col)"
+                  >
+                    <span aria-hidden="true">📌</span>
+                  </button>
+                </el-tooltip>
+              </div>
+              <el-input
+                v-model="columnFilters[col]"
+                size="small"
+                clearable
+                :placeholder="$t('detail.filter_placeholder')"
+                @input="scheduleFilterChange"
+                @clear="emitFilterChange"
+                @click.stop
+              />
+            </div>
+          </template>
           <template #default="scope">
-            <span class="cell-value">{{ scope.row.config_data[col] || "-" }}</span>
+            <span class="cell-value">{{ scope.row.config_data[col] ?? "-" }}</span>
           </template>
         </el-table-column>
         <el-table-column :label="$t('detail.actions')" width="184" fixed="right" align="right">
@@ -96,9 +136,69 @@ export default {
     selectedRows: { type: Array, default: () => [] },
     pagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },
   },
+  data() {
+    return {
+      columnFilters: {},
+      pinnedColumns: [],
+      filterTimer: null,
+    };
+  },
+  computed: {
+    displayedColumns() {
+      const pinned = this.pinnedColumns.filter((column) => this.columns.includes(column));
+      return [...pinned, ...this.columns.filter((column) => !pinned.includes(column))];
+    },
+  },
+  watch: {
+    tableName() {
+      this.resetColumnTools();
+    },
+    columns: {
+      immediate: true,
+      handler(columns) {
+        const nextFilters = {};
+        columns.forEach((column) => {
+          nextFilters[column] = this.columnFilters[column] || "";
+        });
+        this.columnFilters = nextFilters;
+        this.pinnedColumns = this.pinnedColumns.filter((column) => columns.includes(column));
+      },
+    },
+  },
+  beforeUnmount() {
+    window.clearTimeout(this.filterTimer);
+  },
   methods: {
     onSort({ prop, order }) {
       this.$emit("sort-change", { prop, order });
+    },
+    scheduleFilterChange() {
+      window.clearTimeout(this.filterTimer);
+      this.filterTimer = window.setTimeout(this.emitFilterChange, 300);
+    },
+    emitFilterChange() {
+      window.clearTimeout(this.filterTimer);
+      const filters = Object.fromEntries(
+        Object.entries(this.columnFilters)
+          .map(([field, value]) => [field, value.trim()])
+          .filter(([, value]) => value),
+      );
+      this.$emit("filter-change", filters);
+    },
+    togglePinnedColumn(column) {
+      if (this.isPinned(column)) {
+        this.pinnedColumns = this.pinnedColumns.filter((item) => item !== column);
+      } else {
+        this.pinnedColumns = [...this.pinnedColumns, column];
+      }
+    },
+    isPinned(column) {
+      return this.pinnedColumns.includes(column);
+    },
+    resetColumnTools() {
+      window.clearTimeout(this.filterTimer);
+      this.columnFilters = {};
+      this.pinnedColumns = [];
     },
   },
 };
@@ -162,6 +262,46 @@ export default {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 12.5px;
   color: var(--text-primary);
+}
+.column-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+.column-title-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.column-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pin-button {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.pin-button:hover,
+.pin-button.active {
+  background: var(--bg-tertiary);
+  filter: none;
+  opacity: 1;
+}
+.column-header :deep(.el-input__wrapper) {
+  padding: 0 7px;
 }
 .pagination-wrapper {
   margin-top: 20px;

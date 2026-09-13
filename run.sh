@@ -3,15 +3,19 @@
 # MML 配置管理系统 — 一键构建 & 启动脚本
 #
 # 用法:
-#   ./scripts/run.sh             构建前端 + 启动后端
-#   ./scripts/run.sh build       仅构建前端
-#   ./scripts/run.sh start       仅启动后端（假定已构建）
-#   ./scripts/run.sh dev         开发模式（后端 + 前端 dev server）
+#   ./run.sh             构建前端 + 启动后端
+#   ./run.sh build       仅构建前端
+#   ./run.sh start       仅启动后端（假定已构建）
+#   ./run.sh dev         开发模式（后端 + 前端 dev server）
 # ============================================================
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+case "$SCRIPT_PATH" in
+    */*) SCRIPT_DIR="${SCRIPT_PATH%/*}" ;;
+    *)   SCRIPT_DIR="." ;;
+esac
+PROJECT_DIR="$(cd -- "$SCRIPT_DIR" && pwd -P)"
 BACKEND_DIR="$PROJECT_DIR/backend"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
 VENV_DIR="$BACKEND_DIR/.venv"
@@ -57,14 +61,16 @@ check_deps() {
 # ---- 前端构建 ----
 build_frontend() {
     info "构建前端..."
-    cd "$FRONTEND_DIR"
+    (
+        cd "$FRONTEND_DIR"
 
-    if [ ! -d "node_modules" ]; then
-        info "安装前端依赖 (npm install)..."
-        npm install
-    fi
+        if [ ! -d "node_modules" ]; then
+            info "安装前端依赖 (npm install)..."
+            npm install
+        fi
 
-    npm run build
+        npm run build
+    )
     ok "前端构建完成 → $BACKEND_DIR/src/app/static/"
 }
 
@@ -90,14 +96,13 @@ start_backend() {
     ensure_venv
 
     if [ ! -d "$BACKEND_DIR/src/app/static" ] || [ ! -f "$BACKEND_DIR/src/app/static/index.html" ]; then
-        warn "static/index.html 不存在，请先运行 ./scripts/run.sh build"
+        warn "static/index.html 不存在，请先运行 ./run.sh build"
         warn "  或: cd frontend && npm run build"
         exit 1
     fi
 
     info "启动后端服务..."
-    cd "$BACKEND_DIR"
-    exec python -m app.main
+    (cd "$BACKEND_DIR" && exec python -m app.main)
 }
 
 # ---- 开发模式 ----
@@ -105,13 +110,11 @@ start_dev() {
     ensure_venv
 
     info "启动后端 (port 5000)..."
-    cd "$BACKEND_DIR"
-    python -m app.main &
+    (cd "$BACKEND_DIR" && python -m app.main) &
     BACKEND_PID=$!
 
     info "启动前端开发服务器 (port 8080)..."
-    cd "$FRONTEND_DIR"
-    npm run dev &
+    (cd "$FRONTEND_DIR" && npm run dev) &
     FRONTEND_PID=$!
 
     echo ""
