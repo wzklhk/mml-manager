@@ -9,10 +9,17 @@
           </h3>
         </div>
 
+        <el-input
+          v-model="tableSearch"
+          class="aside-table-search"
+          :placeholder="$t('sidebar.search_placeholder')"
+          clearable
+        />
+
         <div class="aside-section">
           <div class="aside-table-list">
             <div
-              v-for="t in tables"
+              v-for="t in filteredTables"
               :key="t.table_name"
               class="aside-table-item"
               :class="{ active: t.table_name === selectedTable }"
@@ -49,6 +56,18 @@ export default {
     selectedTable: { type: String, default: "" },
     tables: { type: Array, default: () => [] },
     collapsed: { type: Boolean, default: false },
+  },
+  data() {
+    return {
+      tableSearch: "",
+    };
+  },
+  computed: {
+    filteredTables() {
+      const query = this.tableSearch.trim().toLocaleLowerCase();
+      if (!query) return this.tables;
+      return this.tables.filter((table) => String(table.table_name).toLocaleLowerCase().includes(query));
+    },
   },
 };
 </script>
@@ -106,6 +125,10 @@ export default {
 
 .aside-section {
   margin-bottom: 20px;
+}
+
+.aside-table-search {
+  margin-bottom: 12px;
 }
 
 /* ---- Table list ---- */

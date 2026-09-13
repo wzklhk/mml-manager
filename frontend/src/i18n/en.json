@@ -15,6 +15,7 @@
   "sidebar.rows": "rows",
   "sidebar.columns_title": "Columns",
   "sidebar.tables_title": "Tables",
+  "sidebar.search_placeholder": "Search table name...",
   "overview.title": "Table Overview",
   "overview.desc": "All command tables in the active configuration",
   "overview.search_placeholder": "Search table name...",

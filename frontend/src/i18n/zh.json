@@ -15,6 +15,7 @@
   "sidebar.rows": "行",
   "sidebar.columns_title": "列",
   "sidebar.tables_title": "表列表",
+  "sidebar.search_placeholder": "搜索表名...",
   "overview.title": "表概览",
   "overview.desc": "当前配置中的所有命令表",
   "overview.search_placeholder": "搜索表名...",
