@@ -6,16 +6,16 @@
 所有与 MML 语法输出相关的函数集中于此。
 """
 
-import re
+import json
 from typing import Any
 
 
 def quote_mml_value(value: Any) -> str:
     """
-    将值格式化为MML值。
-    - None → 空字符串
-    - 浮点整数 (如 201.0) → 整数格式 '201'
-    - 字符串含空格/逗号/分号/双引号 → 双引号括起并转义内部双引号
+    按 JSON 标量规则将值格式化为 MML 值。
+    - 字符串始终使用双引号，并按 JSON 规则转义
+    - 数字和布尔值不加引号
+    - None 输出为 null
 
     Args:
         value: 待格式化的值
@@ -23,19 +23,12 @@ def quote_mml_value(value: Any) -> str:
     Returns:
         格式化后的MML值字符串
     """
-    if value is None:
-        return ""
-    if isinstance(value, float):
-        if value == int(value):
-            return str(int(value))
-        return str(value)
-    value = str(value).strip()
-    if not value:
-        return ""
-    if re.search(r'[\s,;"]', value):
-        escaped = value.replace('"', '""')
-        return f'"{escaped}"'
-    return value
+    if not (isinstance(value, (str, int, float, bool)) or value is None):
+        value = str(value)
+    try:
+        return json.dumps(value, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+    except ValueError:
+        return json.dumps(str(value), ensure_ascii=False, separators=(",", ":"))
 
 
 def format_mml_command(cmd_type: str, table: str, data: dict) -> str:

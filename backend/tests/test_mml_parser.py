@@ -22,8 +22,22 @@ def test_parses_all_add_and_set_forms_with_quoted_delimiters():
         "NATSWITCH": "ON MODE",
         "DESC": 'A "quoted" value',
     }
-    assert tables["EMPTY VALUES"][0]["values"] == {"ONE": None, "TWO": None}
-    assert tables["SAME LINE"][0]["values"] == {"ID": "1"}
+    assert tables["EMPTY VALUES"][0]["values"] == {"ONE": "", "TWO": ""}
+    assert tables["SAME LINE"][0]["values"] == {"ID": 1}
+
+
+def test_parses_json_scalar_types_and_keeps_legacy_bare_strings():
+    tables = parse_mml_text(r'SET TYPES:INT=1,FLOAT=-2.5,BOOL=true,NULL=null,TEXT="001",ESCAPED="a\"b",LEGACY=ON;')
+
+    assert tables["TYPES"][0]["values"] == {
+        "INT": 1,
+        "FLOAT": -2.5,
+        "BOOL": True,
+        "NULL": None,
+        "TEXT": "001",
+        "ESCAPED": 'a"b',
+        "LEGACY": "ON",
+    }
 
 
 def test_ignores_non_add_set_statements_and_unterminated_commands():

@@ -49,6 +49,7 @@
         />
 
         <TableDetail
+          ref="tableDetail"
           v-show="selectedTable"
           :table-name="selectedTable"
           :columns="currentColumns"
@@ -78,6 +79,17 @@
       @save="saveEdit"
     />
     <CompareDialog v-model:visible="compareDialogVisible" />
+    <ExportPreviewDialog
+      v-model:visible="exportPreviewVisible"
+      :loading="exporting"
+      :format="pendingExport?.format || ''"
+      :scope="pendingExport?.scope || 'selected'"
+      :count="pendingExport?.count || 0"
+      :rows="pendingExport?.rows || []"
+      :columns="pendingExport?.columns || []"
+      :tables="pendingExport?.tables || []"
+      @confirm="confirmExport"
+    />
   </div>
 </template>
 
@@ -88,11 +100,12 @@ import TableOverview from "../../components/TableOverview.vue";
 import TableDetail from "../../components/TableDetail.vue";
 import EditDialog from "../../components/EditDialog.vue";
 import CompareDialog from "../../components/CompareDialog.vue";
+import ExportPreviewDialog from "../../components/ExportPreviewDialog.vue";
 import apiClient from "../../api/client";
 
 export default {
   name: "MmlQueryView",
-  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, CompareDialog },
+  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, CompareDialog, ExportPreviewDialog },
   data() {
     return {
       configs: [],
@@ -114,6 +127,9 @@ export default {
       columnFilters: {},
       uploading: false,
       compareDialogVisible: false,
+      exportPreviewVisible: false,
+      exporting: false,
+      pendingExport: null,
     };
   },
   computed: {
@@ -177,6 +193,10 @@ export default {
 
     handleSelectionChange(rows) {
       this.selectedRows = rows;
+    },
+    clearSelectedRows() {
+      this.selectedRows = [];
+      this.$nextTick(() => this.$refs.tableDetail?.clearSelection());
     },
 
     async loadSnapshots() {
@@ -243,7 +263,7 @@ export default {
       this.pagination.page = 1;
       this.sort = { prop: null, order: null };
       this.columnFilters = {};
-      this.selectedRows = [];
+      this.clearSelectedRows();
       this.sidebarCollapsed = false;
       this.loadConfigs();
     },
@@ -252,7 +272,7 @@ export default {
       this.selectedTable = "";
       this.currentColumns = [];
       this.configs = [];
-      this.selectedRows = [];
+      this.clearSelectedRows();
       this.columnFilters = {};
       this.sidebarCollapsed = false;
     },
@@ -267,7 +287,7 @@ export default {
     handleFilterChange(filters) {
       this.columnFilters = filters;
       this.pagination.page = 1;
-      this.selectedRows = [];
+      this.clearSelectedRows();
       this.loadConfigs();
     },
 
@@ -341,7 +361,7 @@ export default {
             const ids = this.selectedRows.map((r) => r.id);
             await apiClient.post("/api/configs/batch-delete", { table_name: this.selectedTable, ids });
             this.$message.success(this.$t("msg.batch_delete_success", { count: ids.length }));
-            this.selectedRows = [];
+            this.clearSelectedRows();
             this.loadConfigs();
             this.loadTables();
           } catch (e) {
@@ -368,6 +388,7 @@ export default {
         window.URL.revokeObjectURL(url);
         const count = Number(res.headers["x-export-count"]) || successCount;
         this.$message.success(this.$t("msg.export_success", { count }));
+        return true;
       } catch (e) {
         let msg = e.response?.data?.error || e.message;
         if (e.response?.data instanceof Blob) {
@@ -379,21 +400,55 @@ export default {
           }
         }
         this.$message.error(this.$t("msg.export_fail", { msg }));
+        return false;
       }
     },
 
-    async batchExport(format) {
+    batchExport(format) {
       if (!this.selectedRows.length) return;
       const ids = this.selectedRows.map((row) => row.id);
-      await this.downloadExport(format, { table_name: this.selectedTable, ids }, ids.length);
+      this.pendingExport = {
+        format,
+        scope: "selected",
+        count: ids.length,
+        payload: { table_name: this.selectedTable, ids },
+        rows: [...this.selectedRows],
+        columns: [...this.currentColumns],
+        tables: [],
+      };
+      this.exportPreviewVisible = true;
     },
 
-    async exportAll(format) {
-      await this.downloadExport(
+    exportAll(format) {
+      const count = this.tables.reduce((total, table) => total + table.count, 0);
+      this.pendingExport = {
         format,
-        {},
-        this.tables.reduce((total, table) => total + table.count, 0),
-      );
+        scope: "all",
+        count,
+        payload: {},
+        rows: [],
+        columns: [],
+        tables: [...this.tables],
+      };
+      this.exportPreviewVisible = true;
+    },
+
+    async confirmExport() {
+      if (!this.pendingExport || this.exporting) return;
+      this.exporting = true;
+      try {
+        const success = await this.downloadExport(
+          this.pendingExport.format,
+          this.pendingExport.payload,
+          this.pendingExport.count,
+        );
+        if (success) {
+          this.exportPreviewVisible = false;
+          this.pendingExport = null;
+        }
+      } finally {
+        this.exporting = false;
+      }
     },
 
     showAddRowDialog() {

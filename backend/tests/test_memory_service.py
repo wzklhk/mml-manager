@@ -25,7 +25,7 @@ def test_import_view_edit_and_export_use_memory(tmp_path):
     row_id = page["configs"][0]["id"]
     assert mml_service.update_config("USER PROFILE", row_id, {"ID": "1", "NAME": "Root User"})
     exported = mml_service.export_mml("USER PROFILE")["content"]
-    assert 'SET USER PROFILE:ID=1,NAME="Root User";' in exported
+    assert 'SET USER PROFILE:ID="1",NAME="Root User";' in exported
     assert "ADD USER PROFILE:ID=2,NAME=Jane Doe;" not in exported
     assert 'ADD USER PROFILE:ID=2,NAME="Jane Doe";' in exported
 
@@ -62,7 +62,7 @@ def test_configs_can_be_filtered_by_multiple_columns():
     filtered = mml_service.get_configs("CELL", page_size=20, filters={"NAME": "alpha_100%", "ID": "1"})
 
     assert filtered["total"] == 1
-    assert [row["config_data"]["ID"] for row in filtered["configs"]] == ["1"]
+    assert [row["config_data"]["ID"] for row in filtered["configs"]] == [1]
 
 
 def test_selected_rows_can_be_exported_as_csv_and_excel():
@@ -71,7 +71,7 @@ def test_selected_rows_can_be_exported_as_csv_and_excel():
         "cells.mml",
     )
     configs = mml_service.get_configs("CELL", page_size=20)["configs"]
-    selected_id = next(row["id"] for row in configs if row["config_data"]["ID"] == "2")
+    selected_id = next(row["id"] for row in configs if row["config_data"]["ID"] == 2)
 
     csv_export = mml_service.export_configurations("csv", "CELL", [selected_id])
     csv_rows = list(csv.DictReader(io.StringIO(csv_export["content"].decode("utf-8-sig"))))

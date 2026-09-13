@@ -23,7 +23,7 @@ class CompareMmlTests(unittest.TestCase):
         table = result["tables"][0]
         self.assertEqual(table["key_fields"], ["ID"])
         modified = next(diff for diff in table["diffs"] if diff["status"] == "modified")
-        self.assertEqual(modified["changes"], [{"field": "POWER", "before": "40", "after": "42"}])
+        self.assertEqual(modified["changes"], [{"field": "POWER", "before": 40, "after": 42}])
 
     def test_supports_multiline_quoted_semicolon_and_gb18030(self):
         text = 'SET ROUTE:ID=1,\nNAME="核心;路由",DESC="A""B";'
