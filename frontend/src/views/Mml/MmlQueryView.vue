@@ -23,14 +23,10 @@
     >
       <Sidebar
         :selected-table="selectedTable"
-        :tables="pagedTables"
-        :table-pagination="tablePagination"
-        :columns="currentColumns"
-        :total-rows="pagination.total"
+        :tables="tables"
         :collapsed="sidebarCollapsed"
         @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed"
         @select-table="enterTable"
-        @table-page-change="handleTablePageChange"
       />
 
       <el-main class="vue-main">
