@@ -29,7 +29,7 @@
   "detail.selected_rows": "已选择 {count} 行",
   "detail.batch_hint": "勾选左侧复选框进行批处理操作",
   "detail.batch_delete": "批量删除",
-  "detail.batch_add": "批量添加",
+  "detail.add_config": "新增配置",
   "detail.batch_export": "批量导出",
   "detail.actions": "操作",
   "detail.edit": "编辑",

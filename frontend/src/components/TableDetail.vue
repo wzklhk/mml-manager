@@ -36,7 +36,7 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.batch_add") }}</el-button>
+          <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.add_config") }}</el-button>
         </div>
       </div>
     </el-card>
