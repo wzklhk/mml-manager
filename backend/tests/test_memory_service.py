@@ -53,6 +53,18 @@ def test_table_summary_is_sorted_by_command_name():
     assert [table["table_name"] for table in mml_service.get_tables_summary()] == ["alpha", "Middle", "ZEBRA"]
 
 
+def test_configs_can_be_filtered_by_multiple_columns():
+    mml_service.import_mml_text(
+        'SET CELL:ID=1,NAME="Alpha_100%"; SET CELL:ID=2,NAME="AlphaX100Y"; SET CELL:ID=3,NAME="Beta";',
+        "filters.mml",
+    )
+
+    filtered = mml_service.get_configs("CELL", page_size=20, filters={"NAME": "alpha_100%", "ID": "1"})
+
+    assert filtered["total"] == 1
+    assert [row["config_data"]["ID"] for row in filtered["configs"]] == ["1"]
+
+
 def test_selected_rows_can_be_exported_as_csv_and_excel():
     mml_service.import_mml_text(
         'SET CELL:ID=1,NAME="Alpha"; ADD CELL:ID=2,NAME="Beta";',

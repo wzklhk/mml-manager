@@ -57,6 +57,7 @@
           :selected-rows="selectedRows"
           :pagination="pagination"
           @sort-change="handleSortChange"
+          @filter-change="handleFilterChange"
           @selection-change="handleSelectionChange"
           @page-change="handlePageChange"
           @size-change="handleSizeChange"
@@ -110,6 +111,7 @@ export default {
       isNewRow: false,
       editForm: {},
       sort: { prop: null, order: null },
+      columnFilters: {},
       uploading: false,
       compareDialogVisible: false,
     };
@@ -240,6 +242,7 @@ export default {
       this.currentColumns = row.columns || [];
       this.pagination.page = 1;
       this.sort = { prop: null, order: null };
+      this.columnFilters = {};
       this.selectedRows = [];
       this.sidebarCollapsed = false;
       this.loadConfigs();
@@ -250,6 +253,7 @@ export default {
       this.currentColumns = [];
       this.configs = [];
       this.selectedRows = [];
+      this.columnFilters = {};
       this.sidebarCollapsed = false;
     },
 
@@ -257,6 +261,13 @@ export default {
       this.sort.prop = prop ? prop.replace("config_data.", "") : null;
       this.sort.order = order === "ascending" ? "asc" : order === "descending" ? "desc" : null;
       this.pagination.page = 1;
+      this.loadConfigs();
+    },
+
+    handleFilterChange(filters) {
+      this.columnFilters = filters;
+      this.pagination.page = 1;
+      this.selectedRows = [];
       this.loadConfigs();
     },
 
@@ -273,6 +284,7 @@ export default {
           params.sort_by = this.sort.prop;
           params.sort_order = this.sort.order;
         }
+        if (Object.keys(this.columnFilters).length) params.filters = JSON.stringify(this.columnFilters);
         const res = await apiClient.get("/api/configs", { params });
         this.configs = res.data.configs;
         this.pagination.total = res.data.total;

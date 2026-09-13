@@ -215,7 +215,12 @@ def get_tables_summary() -> List[Dict]:
 
 
 def get_configs(
-    table_name: str, page: int = 1, page_size: int = 20, sort_by: str = None, sort_order: str = "asc"
+    table_name: str,
+    page: int = 1,
+    page_size: int = 20,
+    sort_by: str = None,
+    sort_order: str = "asc",
+    filters: Dict | None = None,
 ) -> Dict:
     """
     分页获取配置列表。
@@ -228,10 +233,15 @@ def get_configs(
 
     table, loaded_at = store.table_info(table_name)
     columns = table["columns"]
+    filters = {
+        field: str(value)
+        for field, value in (filters or {}).items()
+        if field in columns and value is not None and str(value) != ""
+    }
     if not sort_by:
         # 默认按网元对象标识排序，避免导入顺序不同导致页面与导出结果难以核对。
         sort_by = next((field for field in KEY_FIELD_CANDIDATES if field in columns), None)
-    rows, total = store.query_page(table_name, page, page_size, sort_by, sort_order)
+    rows, total = store.query_page(table_name, page, page_size, sort_by, sort_order, filters)
     page = max(1, int(page))
     page_size = max(1, min(int(page_size), store.max_page_size))
     configs = [

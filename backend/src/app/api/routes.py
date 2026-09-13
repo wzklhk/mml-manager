@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """FastAPI 路由定义与 HTTP 请求/响应处理。"""
 
+import json
 import os
 from datetime import datetime
 from typing import Any
@@ -131,11 +132,15 @@ def get_configs(
     page_size: int = Query(default=20),
     sort_by: str | None = None,
     sort_order: str = "asc",
+    filters: str | None = None,
 ):
     try:
+        column_filters = json.loads(filters) if filters else {}
+        if not isinstance(column_filters, dict):
+            return _error("筛选条件格式无效", 400)
         table_name = table_name.strip()
         if table_name:
-            return mml_service.get_configs(table_name, page, page_size, sort_by, sort_order)
+            return mml_service.get_configs(table_name, page, page_size, sort_by, sort_order, column_filters)
         summary = {
             table["table_name"]: {"count": table["count"], "columns": table["columns"]}
             for table in mml_service.get_tables_summary()
@@ -148,6 +153,8 @@ def get_configs(
             "page_size": page_size,
             "total_pages": 1,
         }
+    except json.JSONDecodeError:
+        return _error("筛选条件格式无效", 400)
     except ValueError as exc:
         return _error(str(exc), 404)
     except Exception as exc:

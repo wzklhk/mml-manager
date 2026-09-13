@@ -283,31 +283,47 @@ def query_snapshot_rows(
     page_size: int,
     sort_by: str | None,
     sort_order: str,
+    filters: Dict[str, str] | None = None,
 ) -> Tuple[List[Dict], int]:
     """Query a bounded page. JSON fields are sorted in SQLite when requested."""
     offset = (page - 1) * page_size
     order = "DESC" if sort_order.lower() == "desc" else "ASC"
     order_clause = "id ASC"
-    params: list[Any] = [snapshot_id, table_name]
+    where_parts = ["snapshot_id=?", "table_name=?"]
+    where_params: list[Any] = [snapshot_id, table_name]
+    for field, value in (filters or {}).items():
+        where_parts.append(
+            "EXISTS (SELECT 1 FROM json_each(values_json) "
+            "WHERE json_each.key=? AND CAST(COALESCE(json_each.value, '') AS TEXT) "
+            "LIKE ? ESCAPE '\\' COLLATE NOCASE)"
+        )
+        escaped_value = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        where_params.extend([field, f"%{escaped_value}%"])
+    where_clause = " AND ".join(where_parts)
+
+    params = list(where_params)
     if sort_by:
         order_clause = f"json_extract(values_json, ?) {order}, id {order}"
         params.append(f'$."{sort_by.replace(chr(34), chr(34) * 2)}"')
     params.extend([page_size, offset])
     with DatabaseConnection() as db:
-        total = db.execute(
-            "SELECT row_count FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+        table = db.execute(
+            "SELECT 1 FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
             (snapshot_id, table_name),
         ).fetchone()
-        if not total:
+        if not table:
             raise ValueError(f"表 {table_name} 不存在")
+        total = db.execute(
+            f"SELECT COUNT(*) AS count FROM _mml_snapshot_rows WHERE {where_clause}", where_params
+        ).fetchone()["count"]
         rows = db.execute(
             f"SELECT id, cmd_type, values_json FROM _mml_snapshot_rows "
-            f"WHERE snapshot_id=? AND table_name=? ORDER BY {order_clause} LIMIT ? OFFSET ?",
+            f"WHERE {where_clause} ORDER BY {order_clause} LIMIT ? OFFSET ?",
             params,
         ).fetchall()
         return [
             {"id": row["id"], "cmd_type": row["cmd_type"], "values": json.loads(row["values_json"])} for row in rows
-        ], total["row_count"]
+        ], total
 
 
 def query_snapshot_row(snapshot_id: str, table_name: str, row_id: int) -> Optional[Dict]:

@@ -122,3 +122,11 @@ def test_export_endpoint_rejects_unknown_format():
 
     assert response.status_code == 400
     assert "只支持" in response.json()["error"]
+
+
+def test_configs_reject_malformed_filters():
+    with TestClient(app) as client:
+        response = client.get("/api/configs", params={"table_name": "CELL", "filters": "not-json"})
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "筛选条件格式无效"}

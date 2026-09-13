@@ -132,17 +132,20 @@ class PersistentConfigStore:
         }
         return tables, loaded_at
 
-    def query_page(self, table_name, page, page_size, sort_by=None, sort_order="asc"):
+    def query_page(self, table_name, page, page_size, sort_by=None, sort_order="asc", filters=None):
         selected_id = self.active_id()
         if selected_id is None:
             raise ValueError("尚未导入配置")
         page = max(1, int(page))
         page_size = max(1, min(int(page_size), self.max_page_size))
-        key = ("page", selected_id, table_name, page, page_size, sort_by, sort_order.lower())
+        normalized_filters = tuple(sorted((filters or {}).items()))
+        key = ("page", selected_id, table_name, page, page_size, sort_by, sort_order.lower(), normalized_filters)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        result = repository.query_snapshot_rows(selected_id, table_name, page, page_size, sort_by, sort_order)
+        result = repository.query_snapshot_rows(
+            selected_id, table_name, page, page_size, sort_by, sort_order, dict(normalized_filters)
+        )
         self._cache.put(key, result)
         return result
 
