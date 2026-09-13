@@ -22,6 +22,10 @@ def _error(message: str, status_code: int) -> JSONResponse:
 
 
 def _is_import_file(file: UploadFile | None) -> bool:
+    return bool(file and file.filename and file.filename.lower().endswith((".mml", ".txt", ".csv", ".xlsx")))
+
+
+def _is_mml_file(file: UploadFile | None) -> bool:
     return bool(file and file.filename and file.filename.lower().endswith((".mml", ".txt")))
 
 
@@ -55,9 +59,11 @@ async def import_mml(
     if not file.filename:
         return _error("文件名为空", 400)
     if not _is_import_file(file):
-        return _error("只支持 .mml 或 .txt 格式文件", 400)
+        return _error("只支持 .mml、.txt、.csv 或 .xlsx 格式文件", 400)
     try:
-        result = await run_in_threadpool(mml_service.import_mml_stream, file.file, file.filename, network_element)
+        result = await run_in_threadpool(
+            mml_service.import_configuration_stream, file.file, file.filename, network_element
+        )
         return JSONResponse(result, status_code=400) if "error" in result else result
     except ValueError as exc:
         return _error(str(exc), 400)
@@ -72,7 +78,7 @@ async def compare_mml(
     baseline: UploadFile | None = File(default=None),
     target: UploadFile | None = File(default=None),
 ):
-    if not _is_import_file(baseline) or not _is_import_file(target):
+    if not _is_mml_file(baseline) or not _is_mml_file(target):
         return _error("请上传两份 .mml 或 .txt 文件", 400)
     try:
         baseline_text = mml_service.decode_mml_bytes(await _read_upload(baseline, MAX_COMPARE_FILE_SIZE))
@@ -90,6 +96,30 @@ def get_tables():
         return {"tables": mml_service.get_tables_summary()}
     except Exception as exc:
         return _error(str(exc), 500)
+
+
+@api.post("/tables", status_code=201)
+def create_table(data: dict[str, Any] | None = None):
+    data = data or {}
+    try:
+        table = mml_service.create_table(data.get("table_name", ""), data.get("columns", []))
+        return JSONResponse({"message": "表创建成功", "table": table}, status_code=201)
+    except ValueError as exc:
+        return _error(str(exc), 400)
+    except Exception as exc:
+        return _error(f"创建表失败: {exc}", 500)
+
+
+@api.post("/tables/delete")
+def delete_table(data: dict[str, Any] | None = None):
+    table_name = (data or {}).get("table_name", "")
+    try:
+        mml_service.delete_table(table_name)
+        return {"message": "表删除成功", "table_name": table_name}
+    except ValueError as exc:
+        return _error(str(exc), 404 if table_name else 400)
+    except Exception as exc:
+        return _error(f"删除表失败: {exc}", 500)
 
 
 @api.get("/snapshots")

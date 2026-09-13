@@ -173,6 +173,26 @@ class PersistentConfigStore:
             )
         )
 
+    def create_table(self, table_name, columns):
+        selected_id = self.active_id()
+        if selected_id is None:
+            raise ValueError("尚未导入配置")
+        with self._lock:
+            repository.create_snapshot_table(selected_id, table_name, columns)
+            self._invalidate_table(selected_id, table_name)
+
+    def delete_table(self, table_name):
+        selected_id = self.active_id()
+        if selected_id is None:
+            raise ValueError("尚未导入配置")
+        with self._lock:
+            deleted = repository.delete_snapshot_table(selected_id, table_name)
+            if deleted:
+                self._invalidate_table(selected_id, table_name)
+        if not deleted:
+            raise ValueError(f"表 {table_name} 不存在")
+        return True
+
     def add(self, table_name, values, cmd_type="SET"):
         selected_id = self.active_id()
         if selected_id is None:

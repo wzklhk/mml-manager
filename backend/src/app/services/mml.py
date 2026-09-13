@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..mml_parser import parse_mml_stream, parse_mml_text
 from ..utils.mml import format_mml_command
+from ..utils.tabular import normalize_excel_value, parse_csv_value, write_excel_cell
 from .memory_store import store
 
 
@@ -173,6 +174,83 @@ def import_mml_stream(binary_stream, name: str, network_element: str | None = No
     raise ValueError("文件编码无法识别，请使用 UTF-8 或 GB18030 编码") from last_error
 
 
+def _tabular_headers(row, table_name: str) -> Tuple[List[str], List[int]]:
+    headers = [str(value).strip() if value is not None else "" for value in row]
+    indices = [index for index, header in enumerate(headers) if header]
+    selected = [headers[index] for index in indices]
+    if len(selected) != len(set(selected)):
+        raise ValueError(f"表 {table_name} 包含重复列名")
+    return selected, indices
+
+
+def _iter_csv_commands(binary_stream, name: str):
+    binary_stream.seek(0)
+    text = decode_mml_bytes(binary_stream.read())
+    reader = csv.reader(io.StringIO(text))
+    header_row = next(reader, None)
+    table_name = os.path.splitext(os.path.basename(name))[0].strip() or "TABLE"
+    if header_row is None:
+        return
+    headers, indices = _tabular_headers(header_row, table_name)
+    if not headers:
+        return
+    for row in reader:
+        values = {
+            header: parse_csv_value(row[index] if index < len(row) else "") for header, index in zip(headers, indices)
+        }
+        if any(value not in (None, "") for value in values.values()):
+            yield {"cmd_type": "SET", "table": table_name, "values": values}
+
+
+def _iter_excel_commands(binary_stream):
+    from openpyxl import load_workbook
+    from openpyxl.utils.exceptions import InvalidFileException
+
+    binary_stream.seek(0)
+    try:
+        workbook = load_workbook(binary_stream, read_only=True, data_only=True)
+    except (InvalidFileException, OSError, zipfile.BadZipFile) as exc:
+        raise ValueError("Excel 文件无效或已损坏") from exc
+    try:
+        for sheet in workbook.worksheets:
+            rows = sheet.iter_rows(values_only=True)
+            header_row = next(rows, None)
+            if header_row is None:
+                continue
+            headers, indices = _tabular_headers(header_row, sheet.title)
+            if not headers:
+                continue
+            for row in rows:
+                values = {
+                    header: normalize_excel_value(row[index] if index < len(row) else None)
+                    for header, index in zip(headers, indices)
+                }
+                if any(value not in (None, "") for value in values.values()):
+                    yield {"cmd_type": "SET", "table": sheet.title, "values": values}
+    finally:
+        workbook.close()
+
+
+def import_configuration_stream(binary_stream, name: str, network_element: str | None = None) -> Dict:
+    """Import MML, CSV, or XLSX content while preserving scalar value types."""
+    extension = os.path.splitext(name)[1].lower()
+    if extension in (".mml", ".txt"):
+        return import_mml_stream(binary_stream, name, network_element)
+    if extension == ".csv":
+        commands = _iter_csv_commands(binary_stream, name)
+    elif extension == ".xlsx":
+        commands = _iter_excel_commands(binary_stream)
+    else:
+        raise ValueError("只支持 .mml、.txt、.csv 或 .xlsx 格式文件")
+    snapshot, table_names = store.add_snapshot_stream(commands, name, network_element)
+    return {
+        "message": f"成功导入并持久化 {snapshot['command_count']} 条配置",
+        "tables": table_names,
+        "total_count": snapshot["command_count"],
+        "snapshot": snapshot,
+    }
+
+
 def import_mml_text(text: str, name: str = "未命名配置", network_element: str | None = None) -> Dict:
     """Parse text, persist an isolated configuration set, and make it active."""
     tables = _parse_mml_text(text)
@@ -298,6 +376,32 @@ def batch_delete_configs(table_name: str, ids: List[int]) -> int:
     return store.delete(table_name, ids)
 
 
+def create_table(table_name: str, columns: List[str]) -> Dict:
+    if not isinstance(table_name, str) or not isinstance(columns, list):
+        raise ValueError("表名和字段格式无效")
+    table_name = table_name.strip()
+    if not table_name:
+        raise ValueError("表名不能为空")
+    if len(table_name) > 128 or re.search(r"[:;\r\n]", table_name):
+        raise ValueError("表名不能超过 128 个字符，且不能包含冒号、分号或换行")
+    normalized_columns = sorted({str(column).strip() for column in (columns or []) if str(column).strip()})
+    if not normalized_columns:
+        raise ValueError("至少需要一个字段")
+    if any(len(column) > 128 or re.search(r"[=,;\r\n]", column) for column in normalized_columns):
+        raise ValueError("字段名不能超过 128 个字符，且不能包含等号、逗号、分号或换行")
+    store.create_table(table_name, normalized_columns)
+    return {"table_name": table_name, "columns": normalized_columns, "count": 0}
+
+
+def delete_table(table_name: str) -> bool:
+    if not isinstance(table_name, str):
+        raise ValueError("表名格式无效")
+    table_name = table_name.strip()
+    if not table_name:
+        raise ValueError("表名不能为空")
+    return store.delete_table(table_name)
+
+
 def _select_export_tables(table_name: Optional[str] = None, ids: Optional[List[int]] = None) -> Dict:
     """Return the requested tables/rows from the active snapshot."""
     tables, _ = store.snapshot()
@@ -397,8 +501,7 @@ def _export_excel(tables: Dict, selected: bool, timestamp: str) -> Dict:
             cell.alignment = Alignment(horizontal="center")
         for row_index, row in enumerate(table["rows"], 2):
             for column_index, column in enumerate(table["columns"], 1):
-                cell = sheet.cell(row=row_index, column=column_index, value=str(row["values"].get(column, "") or ""))
-                cell.data_type = "s"
+                write_excel_cell(sheet, row_index, column_index, row["values"].get(column))
         sheet.freeze_panes = "A2"
         sheet.auto_filter.ref = sheet.dimensions
         for column_index, column in enumerate(table["columns"], 1):

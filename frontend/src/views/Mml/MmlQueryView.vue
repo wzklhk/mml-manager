@@ -35,8 +35,11 @@
           v-model="tableSearch"
           :tables="pagedTables"
           :can-export="tables.length > 0"
+          :can-manage-tables="Boolean(activeSnapshotId)"
           :pagination="tablePagination"
           @enter-table="enterTable"
+          @add-table="addTable"
+          @delete-table="deleteTable"
           @refresh="loadTables"
           @export-all="exportAll"
           @sort="handleOverviewSort"
@@ -251,6 +254,65 @@ export default {
       } catch (e) {
         this.$message.error(this.$t("msg.load_tables_fail", { msg: e.message }));
       }
+    },
+
+    async addTable() {
+      try {
+        const tableResult = await this.$prompt(
+          this.$t("overview.add_table_name_prompt"),
+          this.$t("overview.add_table_title"),
+          {
+            confirmButtonText: this.$t("overview.next"),
+            cancelButtonText: this.$t("dialog.cancel"),
+            inputPlaceholder: this.$t("overview.add_table_name_placeholder"),
+            inputValidator: (value) => Boolean(value?.trim()) || this.$t("overview.table_name_required"),
+          },
+        );
+        const columnsResult = await this.$prompt(
+          this.$t("overview.add_columns_prompt"),
+          this.$t("overview.add_table_title"),
+          {
+            confirmButtonText: this.$t("dialog.add"),
+            cancelButtonText: this.$t("dialog.cancel"),
+            inputPlaceholder: this.$t("overview.add_columns_placeholder"),
+            inputValidator: (value) =>
+              Boolean(value?.split(/[,，\n]/).some((column) => column.trim())) || this.$t("overview.columns_required"),
+          },
+        );
+        const columns = [...new Set(columnsResult.value.split(/[,，\n]/).map((column) => column.trim()).filter(Boolean))];
+        const response = await apiClient.post("/api/tables", {
+          table_name: tableResult.value.trim(),
+          columns,
+        });
+        await this.loadTables();
+        this.$message.success(this.$t("msg.add_table_success"));
+        this.enterTable(response.data.table);
+      } catch (e) {
+        if (e === "cancel" || e === "close") return;
+        this.$message.error(this.$t("msg.add_table_fail", { msg: e.response?.data?.error || e.message }));
+      }
+    },
+
+    deleteTable(table) {
+      this.$confirm(
+        this.$t("confirm.delete_table_content", { name: table.table_name, count: table.count }),
+        this.$t("confirm.delete_table_title"),
+        {
+          confirmButtonText: this.$t("confirm.btn_confirm"),
+          cancelButtonText: this.$t("confirm.btn_cancel"),
+          type: "warning",
+        },
+      )
+        .then(async () => {
+          try {
+            await apiClient.post("/api/tables/delete", { table_name: table.table_name });
+            await this.loadTables();
+            this.$message.success(this.$t("msg.delete_table_success"));
+          } catch (e) {
+            this.$message.error(this.$t("msg.delete_table_fail", { msg: e.response?.data?.error || e.message }));
+          }
+        })
+        .catch(() => {});
     },
 
     enterTable(row) {

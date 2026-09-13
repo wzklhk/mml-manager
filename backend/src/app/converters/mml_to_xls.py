@@ -6,6 +6,7 @@ import csv
 from typing import Dict, List, Set, Optional
 
 from .mml_to_sql import parse_mml_file, sort_configs_by_values
+from ..utils.tabular import write_excel_cell
 
 
 def convert_file_to_excel_and_csv(
@@ -56,7 +57,7 @@ def convert_file_to_excel_and_csv(
             for ri, config in enumerate(configs_by_table[table_name], 2):
                 for ci, col in enumerate(columns, 1):
                     val = config["values"].get(col, "")
-                    ws.cell(row=ri, column=ci, value=val)
+                    write_excel_cell(ws, ri, ci, val)
 
         excel_path = f"{output_base}.xlsx"
         wb.save(excel_path)

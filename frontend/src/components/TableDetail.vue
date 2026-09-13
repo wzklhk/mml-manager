@@ -99,7 +99,22 @@
             <span class="cell-value">{{ scope.row.config_data[col] ?? "-" }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('detail.actions')" width="184" fixed="right" align="right">
+        <el-table-column
+          :label="$t('detail.actions')"
+          :width="actionColumnWidth || undefined"
+          fixed="right"
+          header-align="left"
+          class-name="actions-column"
+          label-class-name="actions-column-header"
+        >
+          <template #header>
+            <div class="column-header">
+              <div class="column-title-row">
+                <span class="column-title actions-column-title">{{ $t("detail.actions") }}</span>
+              </div>
+              <div class="actions-filter-placeholder" aria-hidden="true"></div>
+            </div>
+          </template>
           <template #default="scope">
             <div class="mml-row-actions">
               <el-button size="small" @click="$emit('edit-row', scope.row)">{{ $t("detail.edit") }}</el-button>
@@ -128,6 +143,8 @@
 </template>
 
 <script>
+import { measureActionColumnWidth } from "../utils/actionColumnWidth";
+
 export default {
   name: "TableDetail",
   props: {
@@ -143,6 +160,8 @@ export default {
       columnFilters: {},
       pinnedColumns: [],
       filterTimer: null,
+      actionColumnWidth: null,
+      actionResizeFrame: null,
     };
   },
   computed: {
@@ -169,8 +188,25 @@ export default {
   },
   beforeUnmount() {
     window.clearTimeout(this.filterTimer);
+    window.cancelAnimationFrame(this.actionResizeFrame);
+  },
+  mounted() {
+    this.queueActionColumnResize();
+  },
+  updated() {
+    this.queueActionColumnResize();
   },
   methods: {
+    queueActionColumnResize() {
+      if (this.actionResizeFrame) return;
+      this.actionResizeFrame = window.requestAnimationFrame(() => {
+        this.actionResizeFrame = null;
+        const measuredWidth = measureActionColumnWidth(this.$el);
+        if (measuredWidth && measuredWidth !== this.actionColumnWidth) {
+          this.actionColumnWidth = measuredWidth;
+        }
+      });
+    },
     clearSelection() {
       this.$refs.configTable?.clearSelection();
     },
@@ -308,8 +344,18 @@ export default {
 .column-header :deep(.el-input__wrapper) {
   padding: 0 7px;
 }
+.actions-filter-placeholder {
+  height: var(--el-component-size-small);
+}
+.actions-column-title {
+  flex: none;
+}
 .pagination-wrapper {
   margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+:deep(td.actions-column .cell) {
   display: flex;
   justify-content: flex-end;
 }

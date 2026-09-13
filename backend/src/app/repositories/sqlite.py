@@ -347,6 +347,27 @@ def query_all_snapshot_rows(snapshot_id: str, table_name: str) -> List[Dict]:
         ]
 
 
+def create_snapshot_table(snapshot_id: str, table_name: str, columns: List[str]) -> None:
+    with DatabaseConnection() as db:
+        try:
+            db.execute(
+                "INSERT INTO _mml_snapshot_tables(snapshot_id, table_name, columns_json, row_count) "
+                "VALUES (?, ?, ?, 0)",
+                (snapshot_id, table_name, json.dumps(columns, ensure_ascii=False)),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise ValueError(f"表 {table_name} 已存在") from exc
+
+
+def delete_snapshot_table(snapshot_id: str, table_name: str) -> bool:
+    with DatabaseConnection() as db:
+        cursor = db.execute(
+            "DELETE FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+            (snapshot_id, table_name),
+        )
+        return cursor.rowcount > 0
+
+
 def insert_snapshot_row(snapshot_id: str, table_name: str, cmd_type: str, values: Dict) -> int:
     with DatabaseConnection() as db:
         table = db.execute(

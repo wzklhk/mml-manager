@@ -65,9 +65,40 @@ def test_configs_can_be_filtered_by_multiple_columns():
     assert [row["config_data"]["ID"] for row in filtered["configs"]] == [1]
 
 
+def test_tables_can_be_created_and_deleted_in_the_active_snapshot():
+    mml_service.import_mml_text("SET EXISTING:ID=1;", "tables.mml")
+
+    created = mml_service.create_table("NEW TABLE", ["NAME", "ID", "NAME"])
+    row_id = mml_service.add_config("NEW TABLE", {"ID": 7, "NAME": "Alpha"})
+
+    assert created == {"table_name": "NEW TABLE", "columns": ["ID", "NAME"], "count": 0}
+    assert mml_service.get_config("NEW TABLE", row_id)["config_data"] == {"ID": 7, "NAME": "Alpha"}
+    assert mml_service.delete_table("NEW TABLE")
+    assert [table["table_name"] for table in mml_service.get_tables_summary()] == ["EXISTING"]
+
+
+def test_create_table_validates_names_columns_and_duplicates():
+    mml_service.import_mml_text("SET EXISTING:ID=1;", "tables.mml")
+
+    for table_name, columns in (("", ["ID"]), ("BAD:TABLE", ["ID"]), ("NEW", []), ("NEW", ["BAD,FIELD"])):
+        try:
+            mml_service.create_table(table_name, columns)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid table definition should fail")
+
+    try:
+        mml_service.create_table("EXISTING", ["ID"])
+    except ValueError as exc:
+        assert "已存在" in str(exc)
+    else:
+        raise AssertionError("duplicate table should fail")
+
+
 def test_selected_rows_can_be_exported_as_csv_and_excel():
     mml_service.import_mml_text(
-        'SET CELL:ID=1,NAME="Alpha"; ADD CELL:ID=2,NAME="Beta";',
+        'SET CELL:ID=1,NAME="Alpha"; ADD CELL:ID=2,NAME="Beta",POWER=-2.5,CODE="001",FORMULA="=1+1";',
         "cells.mml",
     )
     configs = mml_service.get_configs("CELL", page_size=20)["configs"]
@@ -78,12 +109,22 @@ def test_selected_rows_can_be_exported_as_csv_and_excel():
     assert csv_export["filename"].startswith("CELL_selected_")
     assert csv_export["media_type"].startswith("text/csv")
     assert csv_export["count"] == 1
-    assert csv_rows == [{"ID": "2", "NAME": "Beta"}]
+    assert csv_rows == [{"CODE": "001", "FORMULA": "=1+1", "ID": "2", "NAME": "Beta", "POWER": "-2.5"}]
 
     excel_export = mml_service.export_configurations("xlsx", "CELL", [selected_id])
     workbook = load_workbook(io.BytesIO(excel_export["content"]), read_only=True, data_only=True)
     assert workbook.sheetnames == ["CELL"]
-    assert list(workbook["CELL"].values) == [("ID", "NAME"), ("2", "Beta")]
+    sheet = workbook["CELL"]
+    headers = {cell.value: cell.column for cell in sheet[1]}
+    assert sheet.cell(2, headers["ID"]).value == 2
+    assert sheet.cell(2, headers["ID"]).data_type == "n"
+    assert sheet.cell(2, headers["POWER"]).value == -2.5
+    assert sheet.cell(2, headers["POWER"]).data_type == "n"
+    assert sheet.cell(2, headers["CODE"]).value == "001"
+    assert sheet.cell(2, headers["CODE"]).data_type == "s"
+    assert sheet.cell(2, headers["CODE"]).number_format == "@"
+    assert sheet.cell(2, headers["FORMULA"]).value == "=1+1"
+    assert sheet.cell(2, headers["FORMULA"]).data_type == "s"
     workbook.close()
 
 
@@ -103,7 +144,7 @@ def test_all_tables_can_be_exported_as_mml_csv_zip_and_excel():
     excel_export = mml_service.export_configurations("xlsx")
     workbook = load_workbook(io.BytesIO(excel_export["content"]), read_only=True, data_only=True)
     assert workbook.sheetnames == ["CELL", "USER PROFILE"]
-    assert list(workbook["CELL"].values) == [("ID",), ("1",)]
+    assert list(workbook["CELL"].values) == [("ID",), (1,)]
     workbook.close()
 
 

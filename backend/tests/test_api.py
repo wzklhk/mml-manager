@@ -1,6 +1,8 @@
+import io
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+from openpyxl import Workbook
 
 from app.main import app
 from app.services import mml as mml_service
@@ -35,14 +37,14 @@ def test_import_rejects_missing_or_wrong_file_type():
         assert response.status_code == 400
         assert response.json() == {"error": "未上传文件"}
 
-        response = client.post("/api/import-mml", files={"file": ("data.csv", b"test")})
+        response = client.post("/api/import-mml", files={"file": ("data.pdf", b"test")})
         assert response.status_code == 400
-        assert response.json() == {"error": "只支持 .mml 或 .txt 格式文件"}
+        assert response.json() == {"error": "只支持 .mml、.txt、.csv 或 .xlsx 格式文件"}
 
 
 def test_import_accepts_txt_files():
     expected = {"message": "导入成功"}
-    with patch("app.api.routes.mml_service.import_mml_stream", return_value=expected):
+    with patch("app.api.routes.mml_service.import_configuration_stream", return_value=expected):
         with TestClient(app) as client:
             response = client.post(
                 "/api/import-mml",
@@ -50,6 +52,57 @@ def test_import_accepts_txt_files():
             )
     assert response.status_code == 200
     assert response.json() == expected
+
+
+def test_import_csv_infers_scalar_types_and_preserves_leading_zero_strings():
+    content = b"NUMBER,DECIMAL,CODE,ENABLED,NAME\n42,-2.5,001,true,Alpha\n"
+
+    with TestClient(app) as client:
+        response = client.post("/api/import-mml", files={"file": ("cells.csv", content)})
+        configs = client.get("/api/configs", params={"table_name": "cells"})
+
+    assert response.status_code == 200
+    assert response.json()["total_count"] == 1
+    assert configs.status_code == 200
+    assert configs.json()["configs"][0]["config_data"] == {
+        "CODE": "001",
+        "DECIMAL": -2.5,
+        "ENABLED": True,
+        "NAME": "Alpha",
+        "NUMBER": 42,
+    }
+
+
+def test_import_excel_preserves_native_cell_types_and_multiple_sheets():
+    workbook = Workbook()
+    cells = workbook.active
+    cells.title = "CELL"
+    cells.append(["NUMBER", "CODE", "NAME"])
+    cells.append([42, "042", "Alpha"])
+    users = workbook.create_sheet("USER PROFILE")
+    users.append(["ID", "NAME"])
+    users.append([7, "Admin"])
+    content = io.BytesIO()
+    workbook.save(content)
+    workbook.close()
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/import-mml",
+            files={"file": ("configs.xlsx", content.getvalue())},
+        )
+        cells_response = client.get("/api/configs", params={"table_name": "CELL"})
+        users_response = client.get("/api/configs", params={"table_name": "USER PROFILE"})
+
+    assert response.status_code == 200
+    assert response.json()["total_count"] == 2
+    assert response.json()["tables"] == ["CELL", "USER PROFILE"]
+    assert cells_response.json()["configs"][0]["config_data"] == {
+        "CODE": "042",
+        "NAME": "Alpha",
+        "NUMBER": 42,
+    }
+    assert users_response.json()["configs"][0]["config_data"] == {"ID": 7, "NAME": "Admin"}
 
 
 def test_compare_keeps_existing_response_contract():
@@ -78,6 +131,21 @@ def test_snapshot_list_and_activation_endpoints():
         activated = client.post(f"/api/snapshots/{first['snapshot']['id']}/activate")
         assert activated.status_code == 200
         assert activated.json()["snapshot"]["name"] == "first.mml"
+
+
+def test_create_and_delete_table_endpoints():
+    mml_service.import_mml_text("SET EXISTING:ID=1;", "tables.mml")
+
+    with TestClient(app) as client:
+        created = client.post("/api/tables", json={"table_name": "NEW TABLE", "columns": ["ID", "NAME"]})
+        listed = client.get("/api/tables")
+        deleted = client.post("/api/tables/delete", json={"table_name": "NEW TABLE"})
+
+    assert created.status_code == 201
+    assert created.json()["table"] == {"table_name": "NEW TABLE", "columns": ["ID", "NAME"], "count": 0}
+    assert "NEW TABLE" in {table["table_name"] for table in listed.json()["tables"]}
+    assert deleted.status_code == 200
+    assert deleted.json()["table_name"] == "NEW TABLE"
 
 
 def test_delete_snapshot_endpoint_removes_complete_configuration():

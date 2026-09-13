@@ -24,8 +24,8 @@
   margin-left: auto;
 }
 .mml-row-actions {
-  display: flex;
-  justify-content: flex-end;
+  display: inline-flex;
+  width: max-content;
   gap: 8px;
   white-space: nowrap;
 }

@@ -31,11 +31,11 @@
         @success="(r) => $emit('upload-success', r)"
         @error="(e) => $emit('upload-error', e)"
         :before-upload="beforeUpload"
-        accept=".mml,.txt"
+        accept=".mml,.txt,.csv,.xlsx"
         :show-file-list="false"
       >
         <el-button size="default" type="primary">
-          {{ $t("header.import_mml") }}
+          {{ $t("header.import_data") }}
         </el-button>
       </el-upload>
     </div>
@@ -64,8 +64,8 @@ export default {
       return [item.network_element, item.name, importedAt].filter(Boolean).join(" · ");
     },
     beforeUpload(file) {
-      if (![".mml", ".txt"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
-        this.$message.error(this.$t("header.only_mml_file"));
+      if (![".mml", ".txt", ".csv", ".xlsx"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
+        this.$message.error(this.$t("header.only_import_file"));
         return false;
       }
       this.$emit("upload-start");
