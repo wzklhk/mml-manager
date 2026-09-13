@@ -133,6 +133,19 @@ def test_snapshot_list_and_activation_endpoints():
         assert activated.json()["snapshot"]["name"] == "first.mml"
 
 
+def test_create_empty_configuration_endpoint():
+    with TestClient(app) as client:
+        response = client.post("/api/snapshots", json={"name": "Manual Config"})
+        listed = client.get("/api/snapshots")
+        tables = client.get("/api/tables")
+
+    assert response.status_code == 201
+    assert response.json()["snapshot"]["name"] == "Manual Config"
+    assert response.json()["total_count"] == 0
+    assert listed.json()["active_id"] == response.json()["snapshot"]["id"]
+    assert tables.json()["tables"] == []
+
+
 def test_create_and_delete_table_endpoints():
     mml_service.import_mml_text("SET EXISTING:ID=1;", "tables.mml")
 

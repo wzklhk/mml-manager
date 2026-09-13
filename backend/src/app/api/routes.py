@@ -127,6 +127,17 @@ def get_snapshots():
     return mml_service.get_snapshots()
 
 
+@api.post("/snapshots", status_code=201)
+def create_snapshot(data: dict[str, Any] | None = None):
+    try:
+        result = mml_service.create_configuration((data or {}).get("name", ""))
+        return JSONResponse(result, status_code=201)
+    except ValueError as exc:
+        return _error(str(exc), 400)
+    except Exception as exc:
+        return _error(f"创建配置失败: {exc}", 500)
+
+
 @api.get("/cache/stats")
 def get_cache_stats():
     """Expose bounded-cache utilization for local diagnostics."""

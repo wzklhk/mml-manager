@@ -271,6 +271,23 @@ def get_snapshots() -> Dict:
     return {"snapshots": snapshots, "active_id": active_id}
 
 
+def create_configuration(name: str) -> Dict:
+    if not isinstance(name, str):
+        raise ValueError("配置名称格式无效")
+    name = name.strip()
+    if not name:
+        raise ValueError("配置名称不能为空")
+    if len(name) > 128 or re.search(r"[\r\n]", name):
+        raise ValueError("配置名称不能超过 128 个字符或包含换行")
+    snapshot = store.add_snapshot({}, name)
+    return {
+        "message": "配置创建成功",
+        "tables": [],
+        "total_count": 0,
+        "snapshot": snapshot,
+    }
+
+
 def activate_snapshot(snapshot_id: str) -> Dict:
     return store.activate(snapshot_id)
 

@@ -48,6 +48,18 @@ def test_each_import_is_retained_and_can_be_activated(tmp_path):
     assert [table["table_name"] for table in mml_service.get_tables_summary()] == ["FIRST"]
 
 
+def test_empty_configuration_can_be_created_and_populated():
+    created = mml_service.create_configuration("Manual Config")
+
+    assert created["total_count"] == 0
+    assert created["snapshot"]["name"] == "Manual Config"
+    assert mml_service.get_snapshots()["active_id"] == created["snapshot"]["id"]
+    assert mml_service.get_tables_summary() == []
+
+    mml_service.create_table("CELL", ["ID"])
+    assert [table["table_name"] for table in mml_service.get_tables_summary()] == ["CELL"]
+
+
 def test_table_summary_is_sorted_by_command_name():
     mml_service.import_mml_text("SET ZEBRA:ID=1; SET alpha:ID=2; SET Middle:ID=3;", "sorted.mml")
     assert [table["table_name"] for table in mml_service.get_tables_summary()] == ["alpha", "Middle", "ZEBRA"]

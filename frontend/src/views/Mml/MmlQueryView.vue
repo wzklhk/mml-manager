@@ -9,6 +9,7 @@
       @upload-start="handleUploadStart"
       @upload-success="handleUploadSuccess"
       @upload-error="handleUploadError"
+      @snapshot-create="createConfiguration"
       @compare="compareDialogVisible = true"
       @snapshot-change="switchSnapshot"
       @snapshot-delete="deleteSnapshot"
@@ -205,6 +206,30 @@ export default {
         this.activeSnapshotId = res.data.active_id || "";
       } catch (e) {
         this.$message.error(this.$t("msg.load_snapshots_fail", { msg: e.message }));
+      }
+    },
+
+    async createConfiguration() {
+      try {
+        const result = await this.$prompt(
+          this.$t("header.new_config_prompt"),
+          this.$t("header.new_config_title"),
+          {
+            confirmButtonText: this.$t("dialog.add"),
+            cancelButtonText: this.$t("dialog.cancel"),
+            inputPlaceholder: this.$t("header.new_config_placeholder"),
+            inputValidator: (value) => Boolean(value?.trim()) || this.$t("header.config_name_required"),
+          },
+        );
+        const response = await apiClient.post("/api/snapshots", { name: result.value.trim() });
+        this.activeSnapshotId = response.data.snapshot.id;
+        this.backToOverview();
+        await this.loadSnapshots();
+        await this.loadTables();
+        this.$message.success(this.$t("msg.create_config_success"));
+      } catch (e) {
+        if (e === "cancel" || e === "close") return;
+        this.$message.error(this.$t("msg.create_config_fail", { msg: e.response?.data?.error || e.message }));
       }
     },
 
