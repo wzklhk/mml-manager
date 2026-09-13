@@ -1,5 +1,5 @@
 <template>
-  <div class="mml-query mml-ui">
+  <div class="mml-query mml-ui" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
     <VueHeader
       :menu-active="menuActive"
       :selected-table="selectedTable"

@@ -1,9 +1,5 @@
 <template>
   <div class="sidebar-wrapper">
-    <div v-if="collapsed" class="expand-trigger" @click="$emit('toggle-sidebar')" :title="$t('sidebar.expand')">
-      <span aria-hidden="true">›</span>
-    </div>
-
     <el-aside :width="collapsed ? '0' : '260px'" class="vue-aside">
       <div v-if="!collapsed" class="aside-content">
         <!-- ====== Table list (overview mode) ====== -->
@@ -13,17 +9,6 @@
               <i class="el-icon-menu" style="color: #41b883; margin-right: 6px"></i>
               {{ $t("sidebar.tables_title") || "Tables" }}
             </h3>
-            <div class="aside-header-actions">
-              <el-button
-                size="small"
-                circle
-                class="collapse-btn"
-                @click="$emit('toggle-sidebar')"
-                :title="$t('sidebar.collapse')"
-              >
-                <span aria-hidden="true">‹</span>
-              </el-button>
-            </div>
           </div>
 
           <div class="aside-section">
@@ -61,15 +46,6 @@
             </h3>
             <div class="aside-header-actions">
               <el-tag size="small" type="success" effect="dark">{{ totalRows }} {{ $t("sidebar.rows") }}</el-tag>
-              <el-button
-                size="small"
-                circle
-                class="collapse-btn"
-                @click="$emit('toggle-sidebar')"
-                :title="$t('sidebar.collapse')"
-              >
-                <span aria-hidden="true">‹</span>
-              </el-button>
             </div>
           </div>
 
@@ -85,6 +61,18 @@
         </template>
       </div>
     </el-aside>
+
+    <div class="sidebar-toggle-rail">
+      <button
+        type="button"
+        class="sidebar-edge-trigger"
+        :title="collapsed ? $t('sidebar.expand') : $t('sidebar.collapse')"
+        :aria-label="collapsed ? $t('sidebar.expand') : $t('sidebar.collapse')"
+        @click="$emit('toggle-sidebar')"
+      >
+        <span aria-hidden="true">{{ collapsed ? "›" : "‹" }}</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -106,6 +94,10 @@ export default {
 .sidebar-wrapper {
   position: relative;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
+  background: var(--sidebar-bg);
 }
 
 .vue-aside {
@@ -124,11 +116,6 @@ export default {
   height: 100%;
   width: 260px;
   overflow-y: auto;
-}
-
-.sidebar-wrapper {
-  display: flex;
-  flex-direction: column;
 }
 
 .aside-header {
@@ -159,19 +146,6 @@ export default {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-}
-
-.collapse-btn {
-  border: none !important;
-  background: transparent !important;
-  color: var(--text-muted) !important;
-  font-size: 13px;
-  padding: 4px !important;
-}
-
-.collapse-btn:hover {
-  background: var(--hover-bg) !important;
-  color: var(--text-secondary) !important;
 }
 
 .aside-section {
@@ -256,20 +230,26 @@ export default {
   justify-content: center;
 }
 
-.expand-trigger {
-  position: absolute;
-  top: 50%;
-  right: -24px;
-  transform: translateY(-50%);
+.sidebar-toggle-rail {
+  flex: 0 0 28px;
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+}
+
+.sidebar-edge-trigger {
+  flex: 0 0 auto;
   width: 24px;
   height: 48px;
   background: var(--sidebar-bg);
   border: 1px solid var(--border-color);
-  border-left: none;
-  border-radius: 0 6px 6px 0;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   cursor: pointer;
   color: var(--text-muted);
   font-size: 14px;
@@ -279,8 +259,13 @@ export default {
     background 0.15s;
 }
 
-.expand-trigger:hover {
+.sidebar-edge-trigger:hover {
   color: #41b883;
   background: var(--hover-bg);
+}
+
+.sidebar-edge-trigger:focus-visible {
+  outline: 2px solid #41b883;
+  outline-offset: 2px;
 }
 </style>

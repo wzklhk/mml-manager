@@ -282,6 +282,10 @@ a.module-card:hover {
   min-width: 0;
   padding: 20px;
 }
+.mml-query.sidebar-collapsed .page-content {
+  width: 100%;
+  max-width: none;
+}
 .mml-query .page-desc {
   overflow-wrap: anywhere;
 }
