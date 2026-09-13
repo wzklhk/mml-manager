@@ -90,6 +90,17 @@ async def compare_mml(
         return _error(f"对比失败: {exc}", 500)
 
 
+@api.post("/compare-configurations")
+def compare_configurations(data: dict[str, Any] | None = None):
+    data = data or {}
+    try:
+        return mml_service.compare_snapshots(data.get("baseline_id", ""), data.get("target_id", ""))
+    except ValueError as exc:
+        return _error(str(exc), 400)
+    except Exception as exc:
+        return _error(f"对比失败: {exc}", 500)
+
+
 @api.get("/tables")
 def get_tables():
     try:

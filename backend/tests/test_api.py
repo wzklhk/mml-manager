@@ -120,6 +120,20 @@ def test_compare_keeps_existing_response_contract():
     assert response.json() == expected
 
 
+def test_compare_persisted_configurations_endpoint():
+    baseline = mml_service.import_mml_text("SET CELL:ID=1,POWER=40;", "baseline.mml")
+    target = mml_service.import_mml_text("SET CELL:ID=1,POWER=42;", "target.mml")
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/compare-configurations",
+            json={"baseline_id": baseline["snapshot"]["id"], "target_id": target["snapshot"]["id"]},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["summary"] == {"added": 0, "removed": 0, "modified": 1, "unchanged": 0}
+
+
 def test_snapshot_list_and_activation_endpoints():
     first = mml_service.import_mml_text("SET FIRST:ID=1;", "first.mml")
     second = mml_service.import_mml_text("SET SECOND:ID=2;", "second.mml")

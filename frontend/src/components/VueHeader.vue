@@ -25,7 +25,6 @@
     </div>
     <div class="header-right">
       <el-button size="default" @click="$emit('snapshot-create')">{{ $t("header.new_config") }}</el-button>
-      <el-button size="default" @click="$emit('compare')">{{ $t("header.compare_mml") }}</el-button>
       <el-upload
         class="header-upload"
         :action="uploadUrl"

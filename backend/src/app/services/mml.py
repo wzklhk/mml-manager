@@ -90,7 +90,10 @@ def compare_mml_texts(baseline_text: str, target_text: str) -> Dict:
     target = _parse_mml_text(target_text)
     if not baseline and not target:
         raise ValueError("两份文件中都没有找到有效的 SET/ADD 命令")
+    return _compare_configurations(baseline, target)
 
+
+def _compare_configurations(baseline: Dict[str, List[Dict]], target: Dict[str, List[Dict]]) -> Dict:
     table_results = []
     totals = {"added": 0, "removed": 0, "modified": 0, "unchanged": 0}
     for table_name in sorted(set(baseline) | set(target)):
@@ -147,6 +150,21 @@ def compare_mml_texts(baseline_text: str, target_text: str) -> Dict:
             }
         )
     return {"summary": totals, "tables": table_results}
+
+
+def compare_snapshots(baseline_id: str, target_id: str) -> Dict:
+    if not baseline_id or not target_id:
+        raise ValueError("请选择两个配置")
+    if baseline_id == target_id:
+        raise ValueError("请选择两个不同的配置")
+
+    def snapshot_commands(snapshot_id):
+        tables, _ = store.snapshot(snapshot_id)
+        return {
+            table_name: [{"values": row["values"]} for row in table["rows"]] for table_name, table in tables.items()
+        }
+
+    return _compare_configurations(snapshot_commands(baseline_id), snapshot_commands(target_id))
 
 
 def import_mml_file(file_path: str) -> Dict:

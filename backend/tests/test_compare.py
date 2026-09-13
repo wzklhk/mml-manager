@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 
+from app.services import mml as mml_service
 from app.services.mml import _parse_mml_text, compare_mml_files
 
 
@@ -34,6 +35,27 @@ class CompareMmlTests(unittest.TestCase):
         baseline = self._file(text, "gb18030")
         target = self._file(text.replace('DESC="A""B"', "DESC=C"), "gb18030")
         self.assertEqual(compare_mml_files(baseline, target)["summary"]["modified"], 1)
+
+    def test_compares_two_persisted_configurations(self):
+        baseline = mml_service.import_mml_text(
+            'SET CELL:ID=1,CODE="001",POWER=40; SET CELL:ID=2,CODE="002",POWER=41;',
+            "baseline.mml",
+        )
+        target = mml_service.import_mml_text(
+            'SET CELL:ID=1,CODE="001",POWER=42; SET CELL:ID=3,CODE="003",POWER=41;',
+            "target.mml",
+        )
+
+        result = mml_service.compare_snapshots(baseline["snapshot"]["id"], target["snapshot"]["id"])
+
+        self.assertEqual(result["summary"], {"added": 1, "removed": 1, "modified": 1, "unchanged": 0})
+        modified = next(diff for diff in result["tables"][0]["diffs"] if diff["status"] == "modified")
+        self.assertEqual(modified["changes"], [{"field": "POWER", "before": 40, "after": 42}])
+
+    def test_snapshot_comparison_requires_distinct_configurations(self):
+        snapshot = mml_service.create_configuration("Empty")["snapshot"]
+        with self.assertRaisesRegex(ValueError, "不同"):
+            mml_service.compare_snapshots(snapshot["id"], snapshot["id"])
 
 
 if __name__ == "__main__":

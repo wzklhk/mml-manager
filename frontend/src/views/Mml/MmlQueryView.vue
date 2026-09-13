@@ -10,7 +10,6 @@
       @upload-success="handleUploadSuccess"
       @upload-error="handleUploadError"
       @snapshot-create="createConfiguration"
-      @compare="compareDialogVisible = true"
       @snapshot-change="switchSnapshot"
       @snapshot-delete="deleteSnapshot"
       @logo-click="backToOverview"
@@ -78,7 +77,6 @@
       :form="editForm"
       @save="saveEdit"
     />
-    <CompareDialog v-model:visible="compareDialogVisible" />
     <ExportPreviewDialog
       v-model:visible="exportPreviewVisible"
       :loading="exporting"
@@ -99,13 +97,12 @@ import Sidebar from "../../components/Sidebar.vue";
 import TableOverview from "../../components/TableOverview.vue";
 import TableDetail from "../../components/TableDetail.vue";
 import EditDialog from "../../components/EditDialog.vue";
-import CompareDialog from "../../components/CompareDialog.vue";
 import ExportPreviewDialog from "../../components/ExportPreviewDialog.vue";
 import apiClient from "../../api/client";
 
 export default {
   name: "MmlQueryView",
-  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, CompareDialog, ExportPreviewDialog },
+  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, ExportPreviewDialog },
   data() {
     return {
       configs: [],
@@ -126,7 +123,6 @@ export default {
       sort: { prop: null, order: null },
       columnFilters: {},
       uploading: false,
-      compareDialogVisible: false,
       exportPreviewVisible: false,
       exporting: false,
       pendingExport: null,
@@ -211,16 +207,12 @@ export default {
 
     async createConfiguration() {
       try {
-        const result = await this.$prompt(
-          this.$t("header.new_config_prompt"),
-          this.$t("header.new_config_title"),
-          {
-            confirmButtonText: this.$t("dialog.add"),
-            cancelButtonText: this.$t("dialog.cancel"),
-            inputPlaceholder: this.$t("header.new_config_placeholder"),
-            inputValidator: (value) => Boolean(value?.trim()) || this.$t("header.config_name_required"),
-          },
-        );
+        const result = await this.$prompt(this.$t("header.new_config_prompt"), this.$t("header.new_config_title"), {
+          confirmButtonText: this.$t("dialog.add"),
+          cancelButtonText: this.$t("dialog.cancel"),
+          inputPlaceholder: this.$t("header.new_config_placeholder"),
+          inputValidator: (value) => Boolean(value?.trim()) || this.$t("header.config_name_required"),
+        });
         const response = await apiClient.post("/api/snapshots", { name: result.value.trim() });
         this.activeSnapshotId = response.data.snapshot.id;
         this.backToOverview();
@@ -304,7 +296,14 @@ export default {
               Boolean(value?.split(/[,，\n]/).some((column) => column.trim())) || this.$t("overview.columns_required"),
           },
         );
-        const columns = [...new Set(columnsResult.value.split(/[,，\n]/).map((column) => column.trim()).filter(Boolean))];
+        const columns = [
+          ...new Set(
+            columnsResult.value
+              .split(/[,，\n]/)
+              .map((column) => column.trim())
+              .filter(Boolean),
+          ),
+        ];
         const response = await apiClient.post("/api/tables", {
           table_name: tableResult.value.trim(),
           columns,
