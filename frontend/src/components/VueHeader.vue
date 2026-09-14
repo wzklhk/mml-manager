@@ -1,7 +1,7 @@
 <template>
   <el-header class="vue-header">
     <div class="header-left">
-      <el-button type="primary" @click="$emit('menu-select', 'overview')">
+      <el-button @click="$emit('menu-select', 'overview')">
         {{ $t("header.table_overview") }}
       </el-button>
       <el-select

@@ -1,22 +1,30 @@
 <template>
   <aside class="module-sidebar" :class="{ collapsed }">
+    <div class="sidebar-content">
+      <nav :aria-label="t('workspace.functions')">
+        <RouterLink
+          v-for="item in visibleMenu"
+          :key="item.id"
+          :to="item.path"
+          class="module-menu-item"
+          :title="collapsed ? t(item.title) : undefined"
+          :aria-label="collapsed ? t(item.title) : undefined"
+        >
+          <span class="module-menu-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span v-if="!collapsed">{{ t(item.title) }}</span>
+        </RouterLink>
+      </nav>
+      <p v-if="!collapsed && module.description" class="sidebar-note">{{ t(module.description) }}</p>
+    </div>
     <button
       class="sidebar-toggle"
       :aria-expanded="!collapsed"
-      :aria-label="t('workspace.toggleMenu')"
+      :aria-label="collapsed ? t('workspace.expandMenu') : t('workspace.collapseMenu')"
       @click="collapsed = !collapsed"
     >
-      {{ collapsed ? "☰" : "☰ " + t("workspace.menu") }}
+      <span v-if="!collapsed">{{ t("workspace.collapse") }}</span>
+      <span class="sidebar-toggle-arrow" aria-hidden="true">{{ collapsed ? "→" : "←" }}</span>
     </button>
-    <template v-if="!collapsed">
-      <h2>{{ t(module.name) }}</h2>
-      <nav :aria-label="t('workspace.functions')">
-        <RouterLink v-for="item in visibleMenu" :key="item.id" :to="item.path" class="module-menu-item">
-          {{ t(item.title) }}
-        </RouterLink>
-      </nav>
-      <p v-if="module.description" class="sidebar-note">{{ t(module.description) }}</p>
-    </template>
   </aside>
 </template>
 

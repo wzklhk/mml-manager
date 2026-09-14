@@ -11,7 +11,7 @@ import { mmlRoutes } from "./mml/routes";
  * @property {string} group Translation key
  * @property {boolean} enabled
  * @property {string} [path]
- * @property {Array<{id: string, title: string, path?: string, enabled: boolean}>} [menu]
+ * @property {Array<{id: string, title: string, icon?: string, path?: string, enabled: boolean}>} [menu]
  * @property {import('vue-router').RouteRecordRaw[]} [routes]
  */
 

@@ -42,10 +42,11 @@ function toggleTheme() {
   });
 }
 
-function toggleLang() {
-  locale.value = locale.value === "zh" ? "en" : "zh";
-  localStorage.setItem("locale", locale.value);
+function setLang(nextLocale) {
+  if (!Object.hasOwn({ zh: true, en: true }, nextLocale)) return;
+  locale.value = nextLocale;
+  localStorage.setItem("locale", nextLocale);
 }
 
-provide("appearance", { isDark: readonly(isDark), toggleTheme, toggleLang });
+provide("appearance", { isDark: readonly(isDark), toggleTheme, setLang });
 </script>
