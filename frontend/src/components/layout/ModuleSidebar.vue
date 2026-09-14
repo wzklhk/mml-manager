@@ -17,13 +17,16 @@
       </nav>
     </div>
     <button
+      type="button"
       class="sidebar-toggle"
       :aria-expanded="!collapsed"
       :aria-label="collapsed ? t('workspace.expandMenu') : t('workspace.collapseMenu')"
       @click="collapsed = !collapsed"
     >
       <span v-if="!collapsed">{{ t("workspace.collapse") }}</span>
-      <span class="sidebar-toggle-arrow" aria-hidden="true">{{ collapsed ? "→" : "←" }}</span>
+      <svg class="sidebar-toggle-arrow" :class="{ 'is-collapsed': collapsed }" aria-hidden="true" viewBox="0 0 20 20">
+        <path d="m7.5 4.5 5.5 5.5-5.5 5.5" />
+      </svg>
     </button>
   </aside>
 </template>

@@ -253,18 +253,53 @@ a.module-card:hover {
 .sidebar-toggle {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
-  margin-top: auto;
+  min-height: 36px;
+  margin: auto 0 0;
   border: 0;
-  background: transparent;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0;
+  background: var(--sidebar-bg);
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 8px 0;
+  padding: 7px 10px;
   font-size: 12px;
   white-space: nowrap;
-  border-top: 1px solid var(--border-color);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.sidebar-toggle:hover {
+  color: #3eaf7c;
+  border-top-color: #3eaf7c;
+  background: var(--hover-bg);
+}
+.sidebar-toggle:focus-visible {
+  outline: 2px solid #3eaf7c;
+  outline-offset: 2px;
+}
+.module-sidebar.collapsed .sidebar-toggle {
+  justify-content: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+.sidebar-toggle-arrow {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+.sidebar-toggle-arrow.is-collapsed {
+  transform: rotate(0deg);
 }
 .module-menu-item {
   display: flex;
