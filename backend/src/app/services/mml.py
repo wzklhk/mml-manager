@@ -320,6 +320,7 @@ def get_tables_summary() -> List[Dict]:
         {
             "table_name": table["table_name"],
             "columns": table["columns"],
+            "column_types": table.get("column_types", {}),
             "count": table["count"],
             "created_at": loaded_at or "",
         }
@@ -395,12 +396,49 @@ def get_config(table_name: str, config_id: int) -> Optional[Dict]:
     )
 
 
+def _normalize_values_for_types(config_data: Dict, column_types: Dict[str, str]) -> Dict:
+    if not isinstance(config_data, dict):
+        raise ValueError("配置数据格式无效")
+    normalized = dict(config_data)
+    for column, data_type in column_types.items():
+        value = normalized.get(column)
+        if value is None or value == "":
+            normalized[column] = None if data_type != "string" else ""
+            continue
+        try:
+            if data_type == "integer":
+                if isinstance(value, bool) or float(value) != int(float(value)):
+                    raise ValueError
+                normalized[column] = int(float(value))
+            elif data_type == "decimal":
+                normalized[column] = float(value)
+            elif data_type == "boolean":
+                if isinstance(value, bool):
+                    normalized[column] = value
+                elif str(value).strip().lower() in {"true", "1", "yes"}:
+                    normalized[column] = True
+                elif str(value).strip().lower() in {"false", "0", "no"}:
+                    normalized[column] = False
+                else:
+                    raise ValueError
+            else:
+                normalized[column] = str(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"字段 {column} 的值不是有效的 {data_type}") from None
+    return normalized
+
+
+def _normalize_typed_values(table_name: str, config_data: Dict) -> Dict:
+    table, _ = store.table_info(table_name)
+    return _normalize_values_for_types(config_data, table.get("column_types", {}))
+
+
 def add_config(table_name: str, config_data: Dict) -> int:
-    return store.add(table_name, config_data)
+    return store.add(table_name, _normalize_typed_values(table_name, config_data))
 
 
 def update_config(table_name: str, config_id: int, config_data: Dict) -> bool:
-    return store.update(table_name, config_id, config_data)
+    return store.update(table_name, config_id, _normalize_typed_values(table_name, config_data))
 
 
 def delete_config(table_name: str, config_id: int) -> bool:
@@ -411,7 +449,9 @@ def batch_delete_configs(table_name: str, ids: List[int]) -> int:
     return store.delete(table_name, ids)
 
 
-def create_table(table_name: str, columns: List[str]) -> Dict:
+def _normalize_table_definition(
+    table_name: str, columns: List[str], column_types: Dict[str, str] | None
+) -> tuple[str, List[str], Dict[str, str]]:
     if not isinstance(table_name, str) or not isinstance(columns, list):
         raise ValueError("表名和字段格式无效")
     table_name = table_name.strip()
@@ -424,8 +464,71 @@ def create_table(table_name: str, columns: List[str]) -> Dict:
         raise ValueError("至少需要一个字段")
     if any(len(column) > 128 or re.search(r"[=,;\r\n]", column) for column in normalized_columns):
         raise ValueError("字段名不能超过 128 个字符，且不能包含等号、逗号、分号或换行")
-    store.create_table(table_name, normalized_columns)
-    return {"table_name": table_name, "columns": normalized_columns, "count": 0}
+    column_types = column_types or {}
+    if not isinstance(column_types, dict):
+        raise ValueError("字段类型格式无效")
+    supported_types = {"string", "integer", "decimal", "boolean"}
+    unknown_columns = set(column_types) - set(normalized_columns)
+    if unknown_columns:
+        raise ValueError("字段类型包含未定义的字段")
+    normalized_types = {column: column_types.get(column, "string") for column in normalized_columns}
+    if any(data_type not in supported_types for data_type in normalized_types.values()):
+        raise ValueError("字段类型仅支持 string、integer、decimal 或 boolean")
+    return table_name, normalized_columns, normalized_types
+
+
+def create_table(table_name: str, columns: List[str], column_types: Dict[str, str] | None = None) -> Dict:
+    table_name, normalized_columns, normalized_types = _normalize_table_definition(table_name, columns, column_types)
+    store.create_table(table_name, normalized_columns, normalized_types)
+    return {
+        "table_name": table_name,
+        "columns": normalized_columns,
+        "column_types": normalized_types,
+        "count": 0,
+    }
+
+
+def update_table(
+    original_table_name: str,
+    table_name: str,
+    columns: List[str],
+    column_types: Dict[str, str] | None = None,
+    column_mapping: Dict[str, str] | None = None,
+) -> Dict:
+    if not isinstance(original_table_name, str) or not original_table_name.strip():
+        raise ValueError("原表名不能为空")
+    original_table_name = original_table_name.strip()
+    table_name, normalized_columns, normalized_types = _normalize_table_definition(table_name, columns, column_types)
+    current_table, _ = store.table_info(original_table_name)
+    existing_columns = set(current_table["columns"])
+    if column_mapping is None:
+        column_mapping = {column: column for column in normalized_columns}
+    if not isinstance(column_mapping, dict):
+        raise ValueError("字段映射格式无效")
+    if set(column_mapping) - set(normalized_columns) or set(column_mapping.values()) - existing_columns:
+        raise ValueError("字段映射包含无效字段")
+
+    tables, _ = store.snapshot()
+    source_rows = tables[original_table_name]["rows"]
+    normalized_rows = []
+    for row in source_rows:
+        values = {
+            column: row["values"].get(column_mapping[column]) if column in column_mapping else None
+            for column in normalized_columns
+        }
+        try:
+            values = _normalize_values_for_types(values, normalized_types)
+        except ValueError as exc:
+            raise ValueError(f"无法修改表属性：第 {row['id']} 行{exc}") from None
+        normalized_rows.append({"id": row["id"], "values": values})
+
+    store.update_table(original_table_name, table_name, normalized_columns, normalized_types, normalized_rows)
+    return {
+        "table_name": table_name,
+        "columns": normalized_columns,
+        "column_types": normalized_types,
+        "count": current_table["count"],
+    }
 
 
 def delete_table(table_name: str) -> bool:

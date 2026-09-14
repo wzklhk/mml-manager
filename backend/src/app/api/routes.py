@@ -113,12 +113,30 @@ def get_tables():
 def create_table(data: dict[str, Any] | None = None):
     data = data or {}
     try:
-        table = mml_service.create_table(data.get("table_name", ""), data.get("columns", []))
+        table = mml_service.create_table(data.get("table_name", ""), data.get("columns", []), data.get("column_types"))
         return JSONResponse({"message": "表创建成功", "table": table}, status_code=201)
     except ValueError as exc:
         return _error(str(exc), 400)
     except Exception as exc:
         return _error(f"创建表失败: {exc}", 500)
+
+
+@api.put("/tables")
+def update_table(data: dict[str, Any] | None = None):
+    data = data or {}
+    try:
+        table = mml_service.update_table(
+            data.get("original_table_name", ""),
+            data.get("table_name", ""),
+            data.get("columns", []),
+            data.get("column_types"),
+            data.get("column_mapping"),
+        )
+        return {"message": "表属性修改成功", "table": table}
+    except ValueError as exc:
+        return _error(str(exc), 400)
+    except Exception as exc:
+        return _error(f"修改表属性失败: {exc}", 500)
 
 
 @api.post("/tables/delete")

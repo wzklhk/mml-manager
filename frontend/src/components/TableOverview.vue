@@ -48,7 +48,9 @@
         </el-table-column>
         <el-table-column :label="$t('overview.columns')" min-width="320">
           <template #default="scope">
-            <el-tag v-for="col in scope.row.columns" :key="col" size="small" class="col-tag">{{ col }}</el-tag>
+            <el-tag v-for="col in scope.row.columns" :key="col" size="small" class="col-tag">
+              {{ col }} · {{ typeLabel(scope.row.column_types?.[col]) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column :label="$t('overview.row_count')" prop="count" width="100" sortable="custom" align="center" />
@@ -67,6 +69,9 @@
           <template #default="scope">
             <div class="mml-row-actions">
               <el-button size="small" @click="$emit('enter-table', scope.row)">{{ $t("overview.view") }}</el-button>
+              <el-button size="small" plain @click="$emit('edit-table', scope.row)">
+                {{ $t("overview.edit") }}
+              </el-button>
               <el-button size="small" type="danger" plain @click="$emit('delete-table', scope.row)">
                 {{ $t("overview.delete") }}
               </el-button>
@@ -131,6 +136,9 @@ export default {
     onSort({ prop, order }) {
       if (!prop || !order) return;
       this.$emit("sort", { prop, order });
+    },
+    typeLabel(dataType) {
+      return dataType ? this.$t(`overview.type_${dataType}`) : this.$t("overview.type_unknown");
     },
   },
 };

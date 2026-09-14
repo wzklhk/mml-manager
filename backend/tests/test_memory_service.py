@@ -2,8 +2,10 @@ import csv
 import io
 import zipfile
 
+import pytest
 from openpyxl import load_workbook
 
+from app.repositories import sqlite as repository
 from app.services import mml as mml_service
 
 
@@ -25,7 +27,7 @@ def test_import_view_edit_and_export_use_memory(tmp_path):
     row_id = page["configs"][0]["id"]
     assert mml_service.update_config("USER PROFILE", row_id, {"ID": "1", "NAME": "Root User"})
     exported = mml_service.export_mml("USER PROFILE")["content"]
-    assert 'SET USER PROFILE:ID="1",NAME="Root User";' in exported
+    assert 'SET USER PROFILE:ID=1,NAME="Root User";' in exported
     assert "ADD USER PROFILE:ID=2,NAME=Jane Doe;" not in exported
     assert 'ADD USER PROFILE:ID=2,NAME="Jane Doe";' in exported
 
@@ -65,6 +67,41 @@ def test_table_summary_is_sorted_by_command_name():
     assert [table["table_name"] for table in mml_service.get_tables_summary()] == ["alpha", "Middle", "ZEBRA"]
 
 
+def test_imported_table_column_types_are_inferred_from_values():
+    mml_service.import_mml_text(
+        'SET TYPES:COUNT=7,RATIO=1.5,ACTIVE=true,CODE="007"; ' 'SET TYPES:COUNT=8,RATIO=2,ACTIVE=false,CODE="008";',
+        "types.mml",
+    )
+
+    assert mml_service.get_tables_summary()[0]["column_types"] == {
+        "ACTIVE": "boolean",
+        "CODE": "string",
+        "COUNT": "integer",
+        "RATIO": "decimal",
+    }
+
+
+def test_legacy_table_without_type_metadata_is_inferred_and_backfilled():
+    imported = mml_service.import_mml_text("SET LEGACY:ID=1,NAME=Alpha;", "legacy.mml")
+    with repository.DatabaseConnection() as db:
+        db.execute(
+            "UPDATE _mml_snapshot_tables SET column_types_json='{}', type_inference_version=0 "
+            "WHERE snapshot_id=? AND table_name='LEGACY'",
+            (imported["snapshot"]["id"],),
+        )
+    mml_service.store._cache.invalidate()
+
+    summary = mml_service.get_tables_summary()[0]
+
+    assert summary["column_types"] == {"ID": "integer", "NAME": "string"}
+    with repository.DatabaseConnection() as db:
+        stored = db.execute(
+            "SELECT column_types_json FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name='LEGACY'",
+            (imported["snapshot"]["id"],),
+        ).fetchone()["column_types_json"]
+    assert '"ID": "integer"' in stored
+
+
 def test_configs_can_be_filtered_by_multiple_columns():
     mml_service.import_mml_text(
         'SET CELL:ID=1,NAME="Alpha_100%"; SET CELL:ID=2,NAME="AlphaX100Y"; SET CELL:ID=3,NAME="Beta";',
@@ -80,10 +117,15 @@ def test_configs_can_be_filtered_by_multiple_columns():
 def test_tables_can_be_created_and_deleted_in_the_active_snapshot():
     mml_service.import_mml_text("SET EXISTING:ID=1;", "tables.mml")
 
-    created = mml_service.create_table("NEW TABLE", ["NAME", "ID", "NAME"])
+    created = mml_service.create_table("NEW TABLE", ["NAME", "ID", "NAME"], {"ID": "integer", "NAME": "string"})
     row_id = mml_service.add_config("NEW TABLE", {"ID": 7, "NAME": "Alpha"})
 
-    assert created == {"table_name": "NEW TABLE", "columns": ["ID", "NAME"], "count": 0}
+    assert created == {
+        "table_name": "NEW TABLE",
+        "columns": ["ID", "NAME"],
+        "column_types": {"ID": "integer", "NAME": "string"},
+        "count": 0,
+    }
     assert mml_service.get_config("NEW TABLE", row_id)["config_data"] == {"ID": 7, "NAME": "Alpha"}
     assert mml_service.delete_table("NEW TABLE")
     assert [table["table_name"] for table in mml_service.get_tables_summary()] == ["EXISTING"]
@@ -106,6 +148,73 @@ def test_create_table_validates_names_columns_and_duplicates():
         assert "已存在" in str(exc)
     else:
         raise AssertionError("duplicate table should fail")
+
+
+def test_manual_table_types_are_persisted_and_values_are_normalized():
+    mml_service.create_configuration("Typed Config")
+    mml_service.create_table(
+        "TYPED",
+        ["COUNT", "RATIO", "ACTIVE", "LABEL"],
+        {"COUNT": "integer", "RATIO": "decimal", "ACTIVE": "boolean", "LABEL": "string"},
+    )
+
+    row_id = mml_service.add_config("TYPED", {"COUNT": "7", "RATIO": "1.5", "ACTIVE": "true", "LABEL": 42})
+    summary = mml_service.get_tables_summary()[0]
+    row = mml_service.get_config("TYPED", row_id)["config_data"]
+
+    assert summary["column_types"] == {
+        "ACTIVE": "boolean",
+        "COUNT": "integer",
+        "LABEL": "string",
+        "RATIO": "decimal",
+    }
+    assert row == {"COUNT": 7, "RATIO": 1.5, "ACTIVE": True, "LABEL": "42"}
+
+    with pytest.raises(ValueError, match="COUNT"):
+        mml_service.add_config("TYPED", {"COUNT": "seven"})
+
+
+def test_table_properties_can_be_updated_without_losing_mapped_data():
+    mml_service.create_configuration("Editable Config")
+    mml_service.create_table(
+        "OLD TABLE",
+        ["ID", "NAME", "REMOVE_ME"],
+        {"ID": "string", "NAME": "string", "REMOVE_ME": "string"},
+    )
+    row_id = mml_service.add_config("OLD TABLE", {"ID": "7", "NAME": "Alpha", "REMOVE_ME": "discarded"})
+
+    updated = mml_service.update_table(
+        "OLD TABLE",
+        "NEW TABLE",
+        ["ID", "DISPLAY_NAME", "ACTIVE"],
+        {"ID": "integer", "DISPLAY_NAME": "string", "ACTIVE": "boolean"},
+        {"ID": "ID", "DISPLAY_NAME": "NAME"},
+    )
+
+    assert updated == {
+        "table_name": "NEW TABLE",
+        "columns": ["ACTIVE", "DISPLAY_NAME", "ID"],
+        "column_types": {"ACTIVE": "boolean", "DISPLAY_NAME": "string", "ID": "integer"},
+        "count": 1,
+    }
+    assert mml_service.get_config("NEW TABLE", row_id)["config_data"] == {
+        "ACTIVE": None,
+        "DISPLAY_NAME": "Alpha",
+        "ID": 7,
+    }
+    with pytest.raises(ValueError, match="不存在"):
+        mml_service.get_config("OLD TABLE", row_id)
+
+
+def test_incompatible_table_type_update_leaves_definition_unchanged():
+    mml_service.create_configuration("Atomic Update")
+    mml_service.create_table("ITEMS", ["VALUE"], {"VALUE": "string"})
+    mml_service.add_config("ITEMS", {"VALUE": "not-a-number"})
+
+    with pytest.raises(ValueError, match="VALUE"):
+        mml_service.update_table("ITEMS", "RENAMED", ["VALUE"], {"VALUE": "integer"})
+
+    assert mml_service.get_tables_summary()[0]["table_name"] == "ITEMS"
 
 
 def test_selected_rows_can_be_exported_as_csv_and_excel():

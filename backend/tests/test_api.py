@@ -164,15 +164,54 @@ def test_create_and_delete_table_endpoints():
     mml_service.import_mml_text("SET EXISTING:ID=1;", "tables.mml")
 
     with TestClient(app) as client:
-        created = client.post("/api/tables", json={"table_name": "NEW TABLE", "columns": ["ID", "NAME"]})
+        created = client.post(
+            "/api/tables",
+            json={
+                "table_name": "NEW TABLE",
+                "columns": ["ID", "NAME"],
+                "column_types": {"ID": "integer", "NAME": "string"},
+            },
+        )
         listed = client.get("/api/tables")
         deleted = client.post("/api/tables/delete", json={"table_name": "NEW TABLE"})
 
     assert created.status_code == 201
-    assert created.json()["table"] == {"table_name": "NEW TABLE", "columns": ["ID", "NAME"], "count": 0}
+    assert created.json()["table"] == {
+        "table_name": "NEW TABLE",
+        "columns": ["ID", "NAME"],
+        "column_types": {"ID": "integer", "NAME": "string"},
+        "count": 0,
+    }
     assert "NEW TABLE" in {table["table_name"] for table in listed.json()["tables"]}
     assert deleted.status_code == 200
     assert deleted.json()["table_name"] == "NEW TABLE"
+
+
+def test_update_table_properties_endpoint():
+    mml_service.create_configuration("API Editable")
+    mml_service.create_table("ORIGINAL", ["ID"], {"ID": "string"})
+    mml_service.add_config("ORIGINAL", {"ID": "9"})
+
+    with TestClient(app) as client:
+        response = client.put(
+            "/api/tables",
+            json={
+                "original_table_name": "ORIGINAL",
+                "table_name": "RENAMED",
+                "columns": ["NUMBER"],
+                "column_types": {"NUMBER": "integer"},
+                "column_mapping": {"NUMBER": "ID"},
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["table"] == {
+        "table_name": "RENAMED",
+        "columns": ["NUMBER"],
+        "column_types": {"NUMBER": "integer"},
+        "count": 1,
+    }
+    assert mml_service.get_configs("RENAMED")["configs"][0]["config_data"] == {"NUMBER": 9}
 
 
 def test_delete_snapshot_endpoint_removes_complete_configuration():

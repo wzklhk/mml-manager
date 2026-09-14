@@ -39,6 +39,7 @@
           :pagination="tablePagination"
           @enter-table="enterTable"
           @add-table="addTable"
+          @edit-table="editTable"
           @delete-table="deleteTable"
           @export-all="exportAll"
           @sort="handleOverviewSort"
@@ -51,6 +52,7 @@
           v-show="selectedTable"
           :table-name="selectedTable"
           :columns="currentColumns"
+          :column-types="currentColumnTypes"
           :configs="configs"
           :loading="loading"
           :selected-rows="selectedRows"
@@ -74,8 +76,10 @@
       :is-new-row="isNewRow"
       :columns="currentColumns"
       :form="editForm"
+      :column-types="currentColumnTypes"
       @save="saveEdit"
     />
+    <AddTableDialog v-model:visible="addTableDialogVisible" :table="editingTable" @submit="saveTableDefinition" />
     <ExportPreviewDialog
       v-model:visible="exportPreviewVisible"
       :loading="exporting"
@@ -96,12 +100,13 @@ import Sidebar from "../../components/Sidebar.vue";
 import TableOverview from "../../components/TableOverview.vue";
 import TableDetail from "../../components/TableDetail.vue";
 import EditDialog from "../../components/EditDialog.vue";
+import AddTableDialog from "../../components/AddTableDialog.vue";
 import ExportPreviewDialog from "../../components/ExportPreviewDialog.vue";
 import apiClient from "../../api/client";
 
 export default {
   name: "MmlQueryView",
-  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, ExportPreviewDialog },
+  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, AddTableDialog, ExportPreviewDialog },
   data() {
     return {
       configs: [],
@@ -110,6 +115,7 @@ export default {
       activeSnapshotId: "",
       selectedTable: "",
       currentColumns: [],
+      currentColumnTypes: {},
       loading: false,
       tableSearch: "",
       selectedRows: [],
@@ -117,6 +123,8 @@ export default {
       pagination: { page: 1, pageSize: 20, total: 0 },
       tablePagination: { page: 1, pageSize: 20, total: 0 },
       editDialogVisible: false,
+      addTableDialogVisible: false,
+      editingTable: null,
       isNewRow: false,
       editForm: {},
       sort: { prop: null, order: null },
@@ -274,49 +282,49 @@ export default {
       }
     },
 
-    async addTable() {
+    addTable() {
+      this.editingTable = null;
+      this.addTableDialogVisible = true;
+    },
+
+    editTable(table) {
+      this.editingTable = table;
+      this.addTableDialogVisible = true;
+    },
+
+    async saveTableDefinition({ originalTableName, tableName, fields }) {
       try {
-        const tableResult = await this.$prompt(
-          this.$t("overview.add_table_name_prompt"),
-          this.$t("overview.add_table_title"),
-          {
-            confirmButtonText: this.$t("overview.next"),
-            cancelButtonText: this.$t("dialog.cancel"),
-            customClass: "mml-ui",
-            inputPlaceholder: this.$t("overview.add_table_name_placeholder"),
-            inputValidator: (value) => Boolean(value?.trim()) || this.$t("overview.table_name_required"),
-          },
+        const columns = fields.map((field) => field.name);
+        const columnTypes = Object.fromEntries(fields.map((field) => [field.name, field.dataType]));
+        const columnMapping = Object.fromEntries(
+          fields.filter((field) => field.originalName).map((field) => [field.name, field.originalName]),
         );
-        const columnsResult = await this.$prompt(
-          this.$t("overview.add_columns_prompt"),
-          this.$t("overview.add_table_title"),
-          {
-            confirmButtonText: this.$t("dialog.add"),
-            cancelButtonText: this.$t("dialog.cancel"),
-            customClass: "mml-ui",
-            inputPlaceholder: this.$t("overview.add_columns_placeholder"),
-            inputValidator: (value) =>
-              Boolean(value?.split(/[,，\n]/).some((column) => column.trim())) || this.$t("overview.columns_required"),
-          },
-        );
-        const columns = [
-          ...new Set(
-            columnsResult.value
-              .split(/[,，\n]/)
-              .map((column) => column.trim())
-              .filter(Boolean),
-          ),
-        ];
-        const response = await apiClient.post("/api/tables", {
-          table_name: tableResult.value.trim(),
+        const payload = {
+          table_name: tableName,
           columns,
-        });
+          column_types: columnTypes,
+        };
+        let response;
+        if (originalTableName) {
+          response = await apiClient.put("/api/tables", {
+            ...payload,
+            original_table_name: originalTableName,
+            column_mapping: columnMapping,
+          });
+        } else {
+          response = await apiClient.post("/api/tables", payload);
+        }
+        this.addTableDialogVisible = false;
+        this.editingTable = null;
         await this.loadTables();
-        this.$message.success(this.$t("msg.add_table_success"));
+        this.$message.success(this.$t(originalTableName ? "msg.edit_table_success" : "msg.add_table_success"));
         this.enterTable(response.data.table);
       } catch (e) {
-        if (e === "cancel" || e === "close") return;
-        this.$message.error(this.$t("msg.add_table_fail", { msg: e.response?.data?.error || e.message }));
+        this.$message.error(
+          this.$t(originalTableName ? "msg.edit_table_fail" : "msg.add_table_fail", {
+            msg: e.response?.data?.error || e.message,
+          }),
+        );
       }
     },
 
@@ -346,6 +354,7 @@ export default {
     enterTable(row) {
       this.selectedTable = row.table_name;
       this.currentColumns = row.columns || [];
+      this.currentColumnTypes = row.column_types || {};
       this.pagination.page = 1;
       this.sort = { prop: null, order: null };
       this.columnFilters = {};
@@ -357,6 +366,7 @@ export default {
     backToOverview() {
       this.selectedTable = "";
       this.currentColumns = [];
+      this.currentColumnTypes = {};
       this.configs = [];
       this.clearSelectedRows();
       this.columnFilters = {};
@@ -542,7 +552,7 @@ export default {
       this.isNewRow = true;
       this.editForm = {};
       this.currentColumns.forEach((col) => {
-        this.editForm[col] = "";
+        this.editForm[col] = this.currentColumnTypes[col] === "string" || !this.currentColumnTypes[col] ? "" : null;
       });
       this.editDialogVisible = true;
     },
@@ -557,7 +567,7 @@ export default {
       try {
         const configData = {};
         this.currentColumns.forEach((col) => {
-          configData[col] = this.editForm[col] || "";
+          configData[col] = this.editForm[col] ?? "";
         });
         if (this.isNewRow) {
           await apiClient.post("/api/configs", { table_name: this.selectedTable, config_data: configData });

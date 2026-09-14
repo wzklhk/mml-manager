@@ -8,7 +8,9 @@
       <p class="page-desc">
         {{ columns.length }} {{ $t("detail.columns") }} &middot;
         <template v-for="(col, idx) in columns" :key="col">
-          <code class="inline-code">{{ col }}<span v-if="idx < columns.length - 1">, </span></code>
+          <code class="inline-code">
+            {{ col }} ({{ typeLabel(columnTypes[col]) }})<span v-if="idx < columns.length - 1">, </span>
+          </code>
         </template>
       </p>
     </div>
@@ -150,6 +152,7 @@ export default {
   props: {
     tableName: { type: String, default: "" },
     columns: { type: Array, default: () => [] },
+    columnTypes: { type: Object, default: () => ({}) },
     configs: { type: Array, default: () => [] },
     loading: { type: Boolean, default: false },
     selectedRows: { type: Array, default: () => [] },
@@ -197,6 +200,9 @@ export default {
     this.queueActionColumnResize();
   },
   methods: {
+    typeLabel(dataType) {
+      return dataType ? this.$t(`overview.type_${dataType}`) : this.$t("overview.type_unknown");
+    },
     queueActionColumnResize() {
       if (this.actionResizeFrame) return;
       this.actionResizeFrame = window.requestAnimationFrame(() => {
