@@ -8,13 +8,15 @@
         v-if="snapshots.length"
         :model-value="activeSnapshotId"
         class="snapshot-select"
+        popper-class="snapshot-select-dropdown"
         size="default"
+        :title="activeSnapshotLabel"
         :placeholder="$t('header.select_config')"
         @change="$emit('snapshot-change', $event)"
       >
         <el-option v-for="item in snapshots" :key="item.id" :label="snapshotLabel(item)" :value="item.id">
           <div class="snapshot-option">
-            <span class="snapshot-option-label">{{ snapshotLabel(item) }}</span>
+            <span class="snapshot-option-label" :title="snapshotLabel(item)">{{ snapshotLabel(item) }}</span>
             <button
               type="button"
               class="snapshot-delete-button"
@@ -63,6 +65,10 @@ export default {
     activeSnapshotId: { type: String, default: "" },
   },
   computed: {
+    activeSnapshotLabel() {
+      const activeSnapshot = this.snapshots.find((item) => item.id === this.activeSnapshotId);
+      return activeSnapshot ? this.snapshotLabel(activeSnapshot) : "";
+    },
     uploadUrl() {
       return apiUrl("/api/import-mml");
     },
@@ -119,8 +125,28 @@ export default {
   color: var(--text-secondary);
 }
 .snapshot-select {
+  flex: 0 1 220px;
+  min-width: 0;
   width: 220px;
   max-width: 100%;
+}
+.snapshot-select :deep(.el-select__wrapper),
+.snapshot-select :deep(.el-select__selection) {
+  min-width: 0;
+}
+.snapshot-select :deep(.el-select__selected-item) {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:global(.snapshot-select-dropdown) {
+  width: min(360px, calc(100vw - 32px)) !important;
+  max-width: calc(100vw - 32px);
+}
+:global(.snapshot-select-dropdown .el-select-dropdown__item) {
+  padding-right: 8px;
 }
 .snapshot-option {
   display: flex;
@@ -130,12 +156,15 @@ export default {
   width: 100%;
 }
 .snapshot-option-label {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .snapshot-delete-button {
   flex: none;
+  margin-left: auto;
   width: 24px;
   height: 24px;
   padding: 0;

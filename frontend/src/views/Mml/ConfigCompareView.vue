@@ -16,6 +16,7 @@
                 v-model="baselineId"
                 filterable
                 clearable
+                :fit-input-width="true"
                 :placeholder="$t('compare.select_placeholder')"
                 @change="clearResult"
               >
@@ -25,7 +26,9 @@
                   :label="snapshotLabel(item)"
                   :value="item.id"
                   :disabled="item.id === targetId"
-                />
+                >
+                  <span class="snapshot-option-label" :title="snapshotLabel(item)">{{ snapshotLabel(item) }}</span>
+                </el-option>
               </el-select>
             </label>
             <label class="selector-field">
@@ -34,6 +37,7 @@
                 v-model="targetId"
                 filterable
                 clearable
+                :fit-input-width="true"
                 :placeholder="$t('compare.select_placeholder')"
                 @change="clearResult"
               >
@@ -43,7 +47,9 @@
                   :label="snapshotLabel(item)"
                   :value="item.id"
                   :disabled="item.id === baselineId"
-                />
+                >
+                  <span class="snapshot-option-label" :title="snapshotLabel(item)">{{ snapshotLabel(item) }}</span>
+                </el-option>
               </el-select>
             </label>
             <el-button type="primary" :loading="comparing" :disabled="!canCompare" @click="compare">
@@ -230,6 +236,13 @@ export default {
 }
 .selector-field .el-select {
   width: 100%;
+}
+.snapshot-option-label {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .result-card {
   margin-top: 20px;
