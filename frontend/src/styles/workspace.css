@@ -309,6 +309,7 @@ a.module-card:hover {
   font-size: 10px;
 }
 .sidebar-note {
+  margin: 0;
   font-size: 12px;
   line-height: 1.8;
   color: var(--text-muted);

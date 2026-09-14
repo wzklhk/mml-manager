@@ -1,6 +1,7 @@
 <template>
   <aside class="module-sidebar" :class="{ collapsed }">
     <div class="sidebar-content">
+      <p v-if="!collapsed && module.description" class="sidebar-note">{{ t(module.description) }}</p>
       <nav :aria-label="t('workspace.functions')">
         <RouterLink
           v-for="item in visibleMenu"
@@ -14,7 +15,6 @@
           <span v-if="!collapsed">{{ t(item.title) }}</span>
         </RouterLink>
       </nav>
-      <p v-if="!collapsed && module.description" class="sidebar-note">{{ t(module.description) }}</p>
     </div>
     <button
       class="sidebar-toggle"
