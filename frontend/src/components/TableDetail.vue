@@ -25,8 +25,8 @@
             $t("detail.batch_delete")
           }}</el-button>
           <el-dropdown :disabled="selectedRows.length === 0" @command="$emit('batch-export', $event)">
-            <el-button :disabled="selectedRows.length === 0">
-              {{ $t("detail.batch_export") }}<i class="el-icon-arrow-down el-icon--right"></i>
+            <el-button type="primary" :disabled="selectedRows.length === 0">
+              {{ $t("detail.batch_export") }}
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>

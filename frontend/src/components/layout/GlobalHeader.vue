@@ -4,13 +4,6 @@
     <ModuleSwitcher />
     <span class="current-module">{{ currentName }}</span>
     <div class="global-header-end">
-      <el-input
-        class="global-search"
-        :placeholder="t('workspace.search')"
-        :aria-label="t('workspace.search')"
-        disabled
-      />
-      <el-button disabled :title="t('workspace.settingsSoon')">{{ t("workspace.settings") }}</el-button>
       <!-- 语言切换 -->
       <button type="button" class="header-icon-btn lang-btn" aria-label="中文 / English" @click="toggleLang()">
         {{ $i18n.locale === "zh" ? "EN" : "中文" }}

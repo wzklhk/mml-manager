@@ -1,7 +1,9 @@
 <template>
   <el-header class="vue-header">
     <div class="header-left">
-      <el-button @click="$emit('menu-select', 'overview')">{{ $t("header.table_overview") }}</el-button>
+      <el-button type="primary" @click="$emit('menu-select', 'overview')">
+        {{ $t("header.table_overview") }}
+      </el-button>
       <el-select
         v-if="snapshots.length"
         :model-value="activeSnapshotId"
@@ -10,21 +12,28 @@
         :placeholder="$t('header.select_config')"
         @change="$emit('snapshot-change', $event)"
       >
-        <el-option v-for="item in snapshots" :key="item.id" :label="snapshotLabel(item)" :value="item.id" />
+        <el-option v-for="item in snapshots" :key="item.id" :label="snapshotLabel(item)" :value="item.id">
+          <div class="snapshot-option">
+            <span class="snapshot-option-label">{{ snapshotLabel(item) }}</span>
+            <button
+              type="button"
+              class="snapshot-delete-button"
+              :title="$t('header.delete_config')"
+              :aria-label="$t('header.delete_config')"
+              @mousedown.stop.prevent
+              @click.stop="$emit('snapshot-delete', item.id)"
+            >
+              ×
+            </button>
+          </div>
+        </el-option>
       </el-select>
-      <el-button
-        v-if="activeSnapshotId"
-        type="danger"
-        plain
-        size="default"
-        @click="$emit('snapshot-delete', activeSnapshotId)"
-      >
-        {{ $t("header.delete_config") }}
-      </el-button>
       <span v-if="selectedTable" class="selected-table-name">{{ selectedTable }}</span>
     </div>
     <div class="header-right">
-      <el-button size="default" @click="$emit('snapshot-create')">{{ $t("header.new_config") }}</el-button>
+      <el-button size="default" type="primary" @click="$emit('snapshot-create')">
+        {{ $t("header.new_config") }}
+      </el-button>
       <el-upload
         class="header-upload"
         :action="uploadUrl"
@@ -35,7 +44,7 @@
         :show-file-list="false"
       >
         <el-button size="default" type="primary">
-          {{ $t("header.import_data") }}
+          {{ $t("header.import_config") }}
         </el-button>
       </el-upload>
     </div>
@@ -112,6 +121,37 @@ export default {
 .snapshot-select {
   width: 220px;
   max-width: 100%;
+}
+.snapshot-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+.snapshot-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.snapshot-delete-button {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: transparent;
+  font-size: 18px;
+  line-height: 22px;
+  cursor: pointer;
+}
+.snapshot-delete-button:hover,
+.snapshot-delete-button:focus-visible {
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+  outline: none;
 }
 .header-upload {
   display: inline-flex;

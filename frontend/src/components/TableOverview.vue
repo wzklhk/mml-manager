@@ -21,8 +21,8 @@
             {{ $t("overview.add_table") }}
           </el-button>
           <el-dropdown :disabled="!canExport" @command="$emit('export-all', $event)">
-            <el-button :disabled="!canExport">
-              {{ $t("export.all") }}<i class="el-icon-arrow-down el-icon--right"></i>
+            <el-button type="primary" :disabled="!canExport">
+              {{ $t("export.all") }}
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -32,7 +32,6 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button @click="$emit('refresh')">{{ $t("overview.refresh") }}</el-button>
         </div>
       </div>
     </el-card>

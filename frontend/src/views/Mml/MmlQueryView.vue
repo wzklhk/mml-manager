@@ -40,7 +40,6 @@
           @enter-table="enterTable"
           @add-table="addTable"
           @delete-table="deleteTable"
-          @refresh="loadTables"
           @export-all="exportAll"
           @sort="handleOverviewSort"
           @page-change="handleTablePageChange"
@@ -210,6 +209,7 @@ export default {
         const result = await this.$prompt(this.$t("header.new_config_prompt"), this.$t("header.new_config_title"), {
           confirmButtonText: this.$t("dialog.add"),
           cancelButtonText: this.$t("dialog.cancel"),
+          customClass: "mml-ui",
           inputPlaceholder: this.$t("header.new_config_placeholder"),
           inputValidator: (value) => Boolean(value?.trim()) || this.$t("header.config_name_required"),
         });
@@ -245,6 +245,7 @@ export default {
         {
           confirmButtonText: this.$t("confirm.btn_confirm"),
           cancelButtonText: this.$t("confirm.btn_cancel"),
+          customClass: "mml-ui",
           type: "warning",
         },
       )
@@ -281,6 +282,7 @@ export default {
           {
             confirmButtonText: this.$t("overview.next"),
             cancelButtonText: this.$t("dialog.cancel"),
+            customClass: "mml-ui",
             inputPlaceholder: this.$t("overview.add_table_name_placeholder"),
             inputValidator: (value) => Boolean(value?.trim()) || this.$t("overview.table_name_required"),
           },
@@ -291,6 +293,7 @@ export default {
           {
             confirmButtonText: this.$t("dialog.add"),
             cancelButtonText: this.$t("dialog.cancel"),
+            customClass: "mml-ui",
             inputPlaceholder: this.$t("overview.add_columns_placeholder"),
             inputValidator: (value) =>
               Boolean(value?.split(/[,，\n]/).some((column) => column.trim())) || this.$t("overview.columns_required"),
@@ -324,6 +327,7 @@ export default {
         {
           confirmButtonText: this.$t("confirm.btn_confirm"),
           cancelButtonText: this.$t("confirm.btn_cancel"),
+          customClass: "mml-ui",
           type: "warning",
         },
       )
@@ -436,6 +440,7 @@ export default {
       this.$confirm(this.$t("confirm.batch_delete_content", { count }), this.$t("confirm.batch_delete_title"), {
         confirmButtonText: this.$t("confirm.btn_confirm"),
         cancelButtonText: this.$t("confirm.btn_cancel"),
+        customClass: "mml-ui",
         type: "warning",
       })
         .then(async () => {
@@ -576,6 +581,7 @@ export default {
       this.$confirm(this.$t("confirm.delete_content"), this.$t("confirm.delete_title"), {
         confirmButtonText: this.$t("confirm.btn_confirm"),
         cancelButtonText: this.$t("confirm.btn_cancel"),
+        customClass: "mml-ui",
         type: "warning",
       })
         .then(async () => {
