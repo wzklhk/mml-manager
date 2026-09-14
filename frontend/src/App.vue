@@ -12,6 +12,7 @@ import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import zhCn from "element-plus/dist/locale/zh-cn.mjs";
 import en from "element-plus/dist/locale/en.mjs";
+import { applyTheme, themes } from "./appearance/themes";
 
 const { locale, t } = useI18n();
 const route = useRoute();
@@ -20,19 +21,22 @@ watchEffect(() => {
   document.documentElement.lang = locale.value === "zh" ? "zh-CN" : "en";
 });
 const elementLocale = computed(() => (locale.value === "zh" ? zhCn : en));
-const isDark = ref(document.documentElement.classList.contains("dark"));
+const currentTheme = ref(document.documentElement.dataset.theme || "light");
 let themeSwitchFrame;
 
-function toggleTheme() {
+function setTheme(themeId) {
+  if (themeId === currentTheme.value) return;
+
   const root = document.documentElement;
-  const nextIsDark = !isDark.value;
 
   window.cancelAnimationFrame(themeSwitchFrame);
   root.classList.add("theme-switching");
-  isDark.value = nextIsDark;
-  localStorage.setItem("theme", nextIsDark ? "dark" : "light");
-  root.classList.toggle("dark", nextIsDark);
-  root.style.colorScheme = nextIsDark ? "dark" : "light";
+  if (!applyTheme(themeId)) {
+    root.classList.remove("theme-switching");
+    return;
+  }
+  currentTheme.value = themeId;
+  localStorage.setItem("theme", themeId);
 
   // Keep transitions disabled until the new theme has been painted once.
   themeSwitchFrame = window.requestAnimationFrame(() => {
@@ -48,5 +52,5 @@ function setLang(nextLocale) {
   localStorage.setItem("locale", nextLocale);
 }
 
-provide("appearance", { isDark: readonly(isDark), toggleTheme, setLang });
+provide("appearance", { currentTheme: readonly(currentTheme), themes, setTheme, setLang });
 </script>

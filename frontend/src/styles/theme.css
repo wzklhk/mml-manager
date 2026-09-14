@@ -76,6 +76,115 @@ html.dark {
   --tag-color: #8bd5ad;
 }
 
+/* ====== 2.1 CSS 变量: 多巴胺主题 ====== */
+html.dopamine {
+  --bg-primary: #fff4a8;
+  --bg-secondary: #fffdf3;
+  --bg-tertiary: #dcf8ff;
+  --bg-card: #ffffff;
+  --text-primary: #2d2140;
+  --text-secondary: #5c456f;
+  --text-muted: #806d91;
+  --border-color: #72d7ee;
+  --border-light: #a8e8f5;
+  --header-bg: #ff4f9a;
+  --header-text: #ffffff;
+  --header-text-muted: #fff7fb;
+  --header-text-active: #fff36d;
+  --header-btn-bg-hover: rgba(255, 243, 109, 0.28);
+  --header-btn-border: rgba(255, 255, 255, 0.5);
+  --header-border: rgba(118, 41, 128, 0.18);
+  --footer-bg: #efe8ff;
+  --sidebar-bg: #f7efff;
+  --table-header-bg: #d9f8ff;
+  --hover-bg: #ffe0ef;
+  --btn-outline-color: #ffffff;
+  --btn-outline-border: rgba(255, 255, 255, 0.55);
+  --scrollbar-thumb: #9b7cf6;
+  --scrollbar-thumb-hover: #7454df;
+  --el-table-bg: #ffffff;
+  --el-table-border: #9de2f0;
+  --el-input-bg: #ffffff;
+  --el-input-border: #8f79e8;
+  --inline-code-bg: #efe8ff;
+  --inline-code-color: #5f42bd;
+  --tag-bg: #d9f9eb;
+  --tag-color: #147855;
+  --el-color-primary: #7057e8;
+  --el-color-primary-light-3: #9b88ef;
+  --el-color-primary-light-5: #b8aaf4;
+  --el-color-primary-light-7: #d4ccf8;
+  --el-color-primary-light-8: #e2dcfa;
+  --el-color-primary-light-9: #f0edfd;
+  --el-color-primary-dark-2: #5942c7;
+}
+
+/* ====== 2.2 CSS 变量: 高对比主题 ====== */
+html.high-contrast {
+  --bg-primary: #000000;
+  --bg-secondary: #000000;
+  --bg-tertiary: #0d0d0d;
+  --bg-card: #000000;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted: #e6e6e6;
+  --border-color: #ffffff;
+  --border-light: #ffffff;
+  --header-bg: #000000;
+  --header-text: #ffffff;
+  --header-text-muted: #ffffff;
+  --header-text-active: #ffea00;
+  --header-btn-bg-hover: #333000;
+  --header-btn-border: #ffffff;
+  --header-border: #ffffff;
+  --footer-bg: #000000;
+  --sidebar-bg: #000000;
+  --table-header-bg: #171717;
+  --hover-bg: #292600;
+  --btn-outline-color: #ffffff;
+  --btn-outline-border: #ffffff;
+  --scrollbar-thumb: #ffffff;
+  --scrollbar-thumb-hover: #ffea00;
+  --el-table-bg: #000000;
+  --el-table-border: #ffffff;
+  --el-input-bg: #000000;
+  --el-input-border: #ffffff;
+  --inline-code-bg: #171717;
+  --inline-code-color: #ffea00;
+  --tag-bg: #171717;
+  --tag-color: #ffffff;
+  --el-color-primary: #1677ff;
+  --el-color-primary-light-3: #115cc4;
+  --el-color-primary-light-5: #0d468f;
+  --el-color-primary-light-7: #092f5c;
+  --el-color-primary-light-8: #061f3d;
+  --el-color-primary-light-9: #03101f;
+  --el-color-primary-dark-2: #3d8dff;
+  --el-bg-color: #000000;
+  --el-bg-color-page: #000000;
+  --el-bg-color-overlay: #0d0d0d;
+  --el-text-color-primary: #ffffff;
+  --el-text-color-regular: #ffffff;
+  --el-text-color-secondary: #e6e6e6;
+  --el-text-color-placeholder: #cccccc;
+  --el-text-color-disabled: #a6a6a6;
+  --el-border-color: #ffffff;
+  --el-border-color-light: #d9d9d9;
+  --el-border-color-lighter: #bfbfbf;
+  --el-border-color-extra-light: #a6a6a6;
+  --el-fill-color: #171717;
+  --el-fill-color-light: #1f1f1f;
+  --el-fill-color-lighter: #262626;
+  --el-fill-color-extra-light: #2e2e2e;
+  --el-fill-color-blank: #000000;
+  --el-mask-color: rgba(0, 0, 0, 0.8);
+}
+
+html.high-contrast :focus-visible {
+  outline: 3px solid #ffea00 !important;
+  outline-offset: 2px;
+}
+
 /* ====== 3. 全局重置 ====== */
 * {
   margin: 0;

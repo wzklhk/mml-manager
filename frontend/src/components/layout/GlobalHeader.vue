@@ -17,7 +17,7 @@
       </nav>
 
       <div class="global-header-end">
-        <el-dropdown trigger="click" @command="setLang">
+        <el-dropdown trigger="hover" @command="setLang">
           <button
             type="button"
             class="header-icon-btn lang-btn"
@@ -35,19 +35,31 @@
           </template>
         </el-dropdown>
 
-        <button
-          type="button"
-          class="header-icon-btn"
-          @click="toggleTheme()"
-          :title="isDark ? $t('header.theme_light') : $t('header.theme_dark')"
-          :aria-label="isDark ? $t('header.theme_light') : $t('header.theme_dark')"
-          :aria-pressed="isDark"
-        >
-          <Transition name="theme-icon" mode="out-in">
-            <span v-if="isDark" key="sun" class="header-emoji" aria-hidden="true">☀️</span>
-            <span v-else key="moon" class="header-emoji" aria-hidden="true">🌙</span>
-          </Transition>
-        </button>
+        <el-dropdown trigger="hover" @command="setTheme">
+          <button
+            type="button"
+            class="header-icon-btn"
+            :title="$t('header.theme')"
+            :aria-label="$t('header.theme')"
+            aria-haspopup="menu"
+          >
+            <span class="header-emoji" aria-hidden="true">👕</span>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item
+                v-for="theme in themes"
+                :key="theme.id"
+                :command="theme.id"
+                :class="{ 'theme-option-selected': theme.id === currentTheme }"
+              >
+                <span class="theme-option-icon" aria-hidden="true">{{ theme.icon }}</span>
+                <span>{{ $t(theme.labelKey) }}</span>
+                <span v-if="theme.id === currentTheme" class="theme-option-check" aria-hidden="true">✓</span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
 
         <a
           href="https://github.com/wzklhk/mml-manager"
@@ -82,7 +94,7 @@ import { computed, inject } from "vue";
 import { useRoute } from "vue-router";
 import { getModule } from "../../modules/registry";
 import ModuleSwitcher from "./ModuleSwitcher.vue";
-const { isDark, toggleTheme, setLang } = inject("appearance");
+const { currentTheme, themes, setTheme, setLang } = inject("appearance");
 const route = useRoute();
 const currentModule = computed(() => getModule(route.meta.moduleId));
 const currentName = computed(() => t(currentModule.value?.name || "workspace.home"));
@@ -109,26 +121,26 @@ const currentName = computed(() => t(currentModule.value?.name || "workspace.hom
   color: var(--header-text-active);
   background: var(--header-btn-bg-hover);
 }
-.theme-icon-enter-active,
-.theme-icon-leave-active {
-  transition:
-    opacity 0.12s ease,
-    transform 0.12s ease;
-}
-.theme-icon-enter-from {
-  opacity: 0;
-  transform: rotate(-45deg) scale(0.75);
-}
-.theme-icon-leave-to {
-  opacity: 0;
-  transform: rotate(45deg) scale(0.75);
-}
 .lang-btn,
 .header-emoji {
   font-size: 18px;
 }
 .header-emoji {
   line-height: 1;
+}
+.theme-option-icon {
+  width: 24px;
+  font-size: 16px;
+}
+.theme-option-check {
+  margin-left: auto;
+  padding-left: 20px;
+  color: var(--el-color-primary);
+  font-weight: 700;
+}
+:global(.theme-option-selected) {
+  color: var(--el-color-primary);
+  font-weight: 600;
 }
 .github-mark {
   display: block;
