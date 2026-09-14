@@ -54,10 +54,6 @@
   color: #3eaf7c;
   background: var(--hover-bg);
 }
-.switcher-chevron {
-  font-size: 14px;
-  transform: translateY(-1px);
-}
 .header-nav {
   margin-left: auto;
   display: flex;
@@ -433,7 +429,6 @@ a.module-card:hover {
   }
   .workspace-brand > span,
   .switcher-trigger-label,
-  .switcher-chevron,
   .header-nav {
     display: none;
   }

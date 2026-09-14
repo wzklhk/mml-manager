@@ -10,7 +10,6 @@
       <button class="switcher-trigger" :aria-label="t('workspace.switcher')" :aria-expanded="visible">
         <span aria-hidden="true">🧩</span>
         <span class="switcher-trigger-label">{{ t("workspace.switcher") }}</span>
-        <span class="switcher-chevron" aria-hidden="true">⌄</span>
       </button>
     </template>
     <nav :aria-label="t('workspace.globalSwitcher')" @keydown.esc="visible = false">
