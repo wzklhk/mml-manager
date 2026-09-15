@@ -4,7 +4,7 @@ target-version = ["py310"]
 
 [project]
 name = "mml-manager"
-version = "0.1.1"
+version = "0.1.2"
 description = "FastAPI backend and conversion toolkit for MML configuration management"
 requires-python = ">=3.10"
 dependencies = [
