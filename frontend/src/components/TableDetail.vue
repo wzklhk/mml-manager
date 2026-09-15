@@ -1,10 +1,13 @@
 <template>
   <div class="page-content">
     <div class="page-header">
-      <h2 class="page-title">
-        <i class="el-icon-s-data" style="color: #41b883; margin-right: 8px"></i>
-        {{ tableName }}
-      </h2>
+      <div class="page-title-row">
+        <h2 class="page-title">
+          <i class="el-icon-s-data" style="color: #41b883; margin-right: 8px"></i>
+          {{ tableName }}
+        </h2>
+        <el-button plain @click="$emit('edit-table')">{{ $t("detail.edit_fields") }}</el-button>
+      </div>
       <p class="page-desc">
         {{ columns.length }} {{ $t("detail.columns") }} &middot;
         <template v-for="(col, idx) in columns" :key="col">
@@ -259,11 +262,18 @@ export default {
 .page-header {
   margin-bottom: 24px;
 }
+.page-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
 .page-title {
   font-size: 24px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 6px 0;
+  margin: 0;
   display: flex;
   align-items: center;
 }

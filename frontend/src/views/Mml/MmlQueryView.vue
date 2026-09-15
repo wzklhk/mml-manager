@@ -65,6 +65,7 @@
           @batch-delete="batchDelete"
           @batch-export="batchExport"
           @add-row="showAddRowDialog"
+          @edit-table="editCurrentTable"
           @edit-row="handleEdit"
           @delete-row="handleDelete"
         />
@@ -290,6 +291,17 @@ export default {
     editTable(table) {
       this.editingTable = table;
       this.addTableDialogVisible = true;
+    },
+
+    editCurrentTable() {
+      const table = this.tables.find((item) => item.table_name === this.selectedTable);
+      this.editTable(
+        table || {
+          table_name: this.selectedTable,
+          columns: this.currentColumns,
+          column_types: this.currentColumnTypes,
+        },
+      );
     },
 
     async saveTableDefinition({ originalTableName, tableName, fields }) {

@@ -66,6 +66,7 @@
   "detail.batch_hint": "Check checkboxes on the left for batch operations",
   "detail.batch_delete": "Batch Delete",
   "detail.add_config": "Add Configuration",
+  "detail.edit_fields": "Edit Properties",
   "detail.batch_export": "Batch Export",
   "detail.actions": "Actions",
   "detail.edit": "Edit",
