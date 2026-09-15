@@ -175,7 +175,7 @@ export default {
   width: 28px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   background: var(--bg-primary);
 }
 
@@ -185,7 +185,8 @@ export default {
   height: 48px;
   background: var(--sidebar-bg);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
   display: flex;
   align-items: center;
   justify-content: center;

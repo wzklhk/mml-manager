@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ..mml_parser import parse_mml_stream, parse_mml_text
 from ..utils.mml import format_mml_command
+from ..utils.tabular import normalize_excel_value, parse_csv_value, write_excel_cell
 from .memory_store import store
 
 
@@ -89,7 +90,10 @@ def compare_mml_texts(baseline_text: str, target_text: str) -> Dict:
     target = _parse_mml_text(target_text)
     if not baseline and not target:
         raise ValueError("两份文件中都没有找到有效的 SET/ADD 命令")
+    return _compare_configurations(baseline, target)
 
+
+def _compare_configurations(baseline: Dict[str, List[Dict]], target: Dict[str, List[Dict]]) -> Dict:
     table_results = []
     totals = {"added": 0, "removed": 0, "modified": 0, "unchanged": 0}
     for table_name in sorted(set(baseline) | set(target)):
@@ -148,6 +152,21 @@ def compare_mml_texts(baseline_text: str, target_text: str) -> Dict:
     return {"summary": totals, "tables": table_results}
 
 
+def compare_snapshots(baseline_id: str, target_id: str) -> Dict:
+    if not baseline_id or not target_id:
+        raise ValueError("请选择两个配置")
+    if baseline_id == target_id:
+        raise ValueError("请选择两个不同的配置")
+
+    def snapshot_commands(snapshot_id):
+        tables, _ = store.snapshot(snapshot_id)
+        return {
+            table_name: [{"values": row["values"]} for row in table["rows"]] for table_name, table in tables.items()
+        }
+
+    return _compare_configurations(snapshot_commands(baseline_id), snapshot_commands(target_id))
+
+
 def import_mml_file(file_path: str) -> Dict:
     """Parse a file into a persistent configuration set and make it active."""
     with open(file_path, "rb") as handle:
@@ -173,6 +192,83 @@ def import_mml_stream(binary_stream, name: str, network_element: str | None = No
     raise ValueError("文件编码无法识别，请使用 UTF-8 或 GB18030 编码") from last_error
 
 
+def _tabular_headers(row, table_name: str) -> Tuple[List[str], List[int]]:
+    headers = [str(value).strip() if value is not None else "" for value in row]
+    indices = [index for index, header in enumerate(headers) if header]
+    selected = [headers[index] for index in indices]
+    if len(selected) != len(set(selected)):
+        raise ValueError(f"表 {table_name} 包含重复列名")
+    return selected, indices
+
+
+def _iter_csv_commands(binary_stream, name: str):
+    binary_stream.seek(0)
+    text = decode_mml_bytes(binary_stream.read())
+    reader = csv.reader(io.StringIO(text))
+    header_row = next(reader, None)
+    table_name = os.path.splitext(os.path.basename(name))[0].strip() or "TABLE"
+    if header_row is None:
+        return
+    headers, indices = _tabular_headers(header_row, table_name)
+    if not headers:
+        return
+    for row in reader:
+        values = {
+            header: parse_csv_value(row[index] if index < len(row) else "") for header, index in zip(headers, indices)
+        }
+        if any(value not in (None, "") for value in values.values()):
+            yield {"cmd_type": "SET", "table": table_name, "values": values}
+
+
+def _iter_excel_commands(binary_stream):
+    from openpyxl import load_workbook
+    from openpyxl.utils.exceptions import InvalidFileException
+
+    binary_stream.seek(0)
+    try:
+        workbook = load_workbook(binary_stream, read_only=True, data_only=True)
+    except (InvalidFileException, OSError, zipfile.BadZipFile) as exc:
+        raise ValueError("Excel 文件无效或已损坏") from exc
+    try:
+        for sheet in workbook.worksheets:
+            rows = sheet.iter_rows(values_only=True)
+            header_row = next(rows, None)
+            if header_row is None:
+                continue
+            headers, indices = _tabular_headers(header_row, sheet.title)
+            if not headers:
+                continue
+            for row in rows:
+                values = {
+                    header: normalize_excel_value(row[index] if index < len(row) else None)
+                    for header, index in zip(headers, indices)
+                }
+                if any(value not in (None, "") for value in values.values()):
+                    yield {"cmd_type": "SET", "table": sheet.title, "values": values}
+    finally:
+        workbook.close()
+
+
+def import_configuration_stream(binary_stream, name: str, network_element: str | None = None) -> Dict:
+    """Import MML, CSV, or XLSX content while preserving scalar value types."""
+    extension = os.path.splitext(name)[1].lower()
+    if extension in (".mml", ".txt"):
+        return import_mml_stream(binary_stream, name, network_element)
+    if extension == ".csv":
+        commands = _iter_csv_commands(binary_stream, name)
+    elif extension == ".xlsx":
+        commands = _iter_excel_commands(binary_stream)
+    else:
+        raise ValueError("只支持 .mml、.txt、.csv 或 .xlsx 格式文件")
+    snapshot, table_names = store.add_snapshot_stream(commands, name, network_element)
+    return {
+        "message": f"成功导入并持久化 {snapshot['command_count']} 条配置",
+        "tables": table_names,
+        "total_count": snapshot["command_count"],
+        "snapshot": snapshot,
+    }
+
+
 def import_mml_text(text: str, name: str = "未命名配置", network_element: str | None = None) -> Dict:
     """Parse text, persist an isolated configuration set, and make it active."""
     tables = _parse_mml_text(text)
@@ -193,6 +289,23 @@ def get_snapshots() -> Dict:
     return {"snapshots": snapshots, "active_id": active_id}
 
 
+def create_configuration(name: str) -> Dict:
+    if not isinstance(name, str):
+        raise ValueError("配置名称格式无效")
+    name = name.strip()
+    if not name:
+        raise ValueError("配置名称不能为空")
+    if len(name) > 128 or re.search(r"[\r\n]", name):
+        raise ValueError("配置名称不能超过 128 个字符或包含换行")
+    snapshot = store.add_snapshot({}, name)
+    return {
+        "message": "配置创建成功",
+        "tables": [],
+        "total_count": 0,
+        "snapshot": snapshot,
+    }
+
+
 def activate_snapshot(snapshot_id: str) -> Dict:
     return store.activate(snapshot_id)
 
@@ -207,6 +320,7 @@ def get_tables_summary() -> List[Dict]:
         {
             "table_name": table["table_name"],
             "columns": table["columns"],
+            "column_types": table.get("column_types", {}),
             "count": table["count"],
             "created_at": loaded_at or "",
         }
@@ -282,12 +396,49 @@ def get_config(table_name: str, config_id: int) -> Optional[Dict]:
     )
 
 
+def _normalize_values_for_types(config_data: Dict, column_types: Dict[str, str]) -> Dict:
+    if not isinstance(config_data, dict):
+        raise ValueError("配置数据格式无效")
+    normalized = dict(config_data)
+    for column, data_type in column_types.items():
+        value = normalized.get(column)
+        if value is None or value == "":
+            normalized[column] = None if data_type != "string" else ""
+            continue
+        try:
+            if data_type == "integer":
+                if isinstance(value, bool) or float(value) != int(float(value)):
+                    raise ValueError
+                normalized[column] = int(float(value))
+            elif data_type == "decimal":
+                normalized[column] = float(value)
+            elif data_type == "boolean":
+                if isinstance(value, bool):
+                    normalized[column] = value
+                elif str(value).strip().lower() in {"true", "1", "yes"}:
+                    normalized[column] = True
+                elif str(value).strip().lower() in {"false", "0", "no"}:
+                    normalized[column] = False
+                else:
+                    raise ValueError
+            else:
+                normalized[column] = str(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"字段 {column} 的值不是有效的 {data_type}") from None
+    return normalized
+
+
+def _normalize_typed_values(table_name: str, config_data: Dict) -> Dict:
+    table, _ = store.table_info(table_name)
+    return _normalize_values_for_types(config_data, table.get("column_types", {}))
+
+
 def add_config(table_name: str, config_data: Dict) -> int:
-    return store.add(table_name, config_data)
+    return store.add(table_name, _normalize_typed_values(table_name, config_data))
 
 
 def update_config(table_name: str, config_id: int, config_data: Dict) -> bool:
-    return store.update(table_name, config_id, config_data)
+    return store.update(table_name, config_id, _normalize_typed_values(table_name, config_data))
 
 
 def delete_config(table_name: str, config_id: int) -> bool:
@@ -296,6 +447,97 @@ def delete_config(table_name: str, config_id: int) -> bool:
 
 def batch_delete_configs(table_name: str, ids: List[int]) -> int:
     return store.delete(table_name, ids)
+
+
+def _normalize_table_definition(
+    table_name: str, columns: List[str], column_types: Dict[str, str] | None
+) -> tuple[str, List[str], Dict[str, str]]:
+    if not isinstance(table_name, str) or not isinstance(columns, list):
+        raise ValueError("表名和字段格式无效")
+    table_name = table_name.strip()
+    if not table_name:
+        raise ValueError("表名不能为空")
+    if len(table_name) > 128 or re.search(r"[:;\r\n]", table_name):
+        raise ValueError("表名不能超过 128 个字符，且不能包含冒号、分号或换行")
+    normalized_columns = sorted({str(column).strip() for column in (columns or []) if str(column).strip()})
+    if not normalized_columns:
+        raise ValueError("至少需要一个字段")
+    if any(len(column) > 128 or re.search(r"[=,;\r\n]", column) for column in normalized_columns):
+        raise ValueError("字段名不能超过 128 个字符，且不能包含等号、逗号、分号或换行")
+    column_types = column_types or {}
+    if not isinstance(column_types, dict):
+        raise ValueError("字段类型格式无效")
+    supported_types = {"string", "integer", "decimal", "boolean"}
+    unknown_columns = set(column_types) - set(normalized_columns)
+    if unknown_columns:
+        raise ValueError("字段类型包含未定义的字段")
+    normalized_types = {column: column_types.get(column, "string") for column in normalized_columns}
+    if any(data_type not in supported_types for data_type in normalized_types.values()):
+        raise ValueError("字段类型仅支持 string、integer、decimal 或 boolean")
+    return table_name, normalized_columns, normalized_types
+
+
+def create_table(table_name: str, columns: List[str], column_types: Dict[str, str] | None = None) -> Dict:
+    table_name, normalized_columns, normalized_types = _normalize_table_definition(table_name, columns, column_types)
+    store.create_table(table_name, normalized_columns, normalized_types)
+    return {
+        "table_name": table_name,
+        "columns": normalized_columns,
+        "column_types": normalized_types,
+        "count": 0,
+    }
+
+
+def update_table(
+    original_table_name: str,
+    table_name: str,
+    columns: List[str],
+    column_types: Dict[str, str] | None = None,
+    column_mapping: Dict[str, str] | None = None,
+) -> Dict:
+    if not isinstance(original_table_name, str) or not original_table_name.strip():
+        raise ValueError("原表名不能为空")
+    original_table_name = original_table_name.strip()
+    table_name, normalized_columns, normalized_types = _normalize_table_definition(table_name, columns, column_types)
+    current_table, _ = store.table_info(original_table_name)
+    existing_columns = set(current_table["columns"])
+    if column_mapping is None:
+        column_mapping = {column: column for column in normalized_columns}
+    if not isinstance(column_mapping, dict):
+        raise ValueError("字段映射格式无效")
+    if set(column_mapping) - set(normalized_columns) or set(column_mapping.values()) - existing_columns:
+        raise ValueError("字段映射包含无效字段")
+
+    tables, _ = store.snapshot()
+    source_rows = tables[original_table_name]["rows"]
+    normalized_rows = []
+    for row in source_rows:
+        values = {
+            column: row["values"].get(column_mapping[column]) if column in column_mapping else None
+            for column in normalized_columns
+        }
+        try:
+            values = _normalize_values_for_types(values, normalized_types)
+        except ValueError as exc:
+            raise ValueError(f"无法修改表属性：第 {row['id']} 行{exc}") from None
+        normalized_rows.append({"id": row["id"], "values": values})
+
+    store.update_table(original_table_name, table_name, normalized_columns, normalized_types, normalized_rows)
+    return {
+        "table_name": table_name,
+        "columns": normalized_columns,
+        "column_types": normalized_types,
+        "count": current_table["count"],
+    }
+
+
+def delete_table(table_name: str) -> bool:
+    if not isinstance(table_name, str):
+        raise ValueError("表名格式无效")
+    table_name = table_name.strip()
+    if not table_name:
+        raise ValueError("表名不能为空")
+    return store.delete_table(table_name)
 
 
 def _select_export_tables(table_name: Optional[str] = None, ids: Optional[List[int]] = None) -> Dict:
@@ -397,8 +639,7 @@ def _export_excel(tables: Dict, selected: bool, timestamp: str) -> Dict:
             cell.alignment = Alignment(horizontal="center")
         for row_index, row in enumerate(table["rows"], 2):
             for column_index, column in enumerate(table["columns"], 1):
-                cell = sheet.cell(row=row_index, column=column_index, value=str(row["values"].get(column, "") or ""))
-                cell.data_type = "s"
+                write_excel_cell(sheet, row_index, column_index, row["values"].get(column))
         sheet.freeze_panes = "A2"
         sheet.auto_filter.ref = sheet.dimensions
         for column_index, column in enumerate(table["columns"], 1):

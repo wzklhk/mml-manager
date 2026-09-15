@@ -16,6 +16,34 @@ from ..converters.mml_to_sql import generate_create_table_sql, generate_insert_s
 _DB_PATH: str | None = None
 
 
+def _merge_data_type(current: str | None, value: Any) -> str | None:
+    """Merge one JSON scalar into a stable UI data type."""
+    if value is None or value == "":
+        return current
+    if isinstance(value, bool):
+        observed = "boolean"
+    elif isinstance(value, int):
+        observed = "integer"
+    elif isinstance(value, float):
+        observed = "decimal"
+    else:
+        observed = "string"
+    if current is None or current == observed:
+        return observed
+    if {current, observed} <= {"integer", "decimal"}:
+        return "decimal"
+    return "string"
+
+
+def _infer_column_types(rows: List[Dict], columns: List[str]) -> Dict[str, str]:
+    inferred: Dict[str, str | None] = {column: None for column in columns}
+    for row in rows:
+        values = row.get("values", {})
+        for column in columns:
+            inferred[column] = _merge_data_type(inferred[column], values.get(column))
+    return {column: data_type or "string" for column, data_type in inferred.items()}
+
+
 def get_db_path() -> str:
     global _DB_PATH
     if _DB_PATH is None:
@@ -113,6 +141,11 @@ def init_snapshot_schema(db_path: str = None) -> None:
             );
             """
         )
+        table_columns = {row["name"] for row in db.execute("PRAGMA table_info(_mml_snapshot_tables)")}
+        if "column_types_json" not in table_columns:
+            db.execute("ALTER TABLE _mml_snapshot_tables ADD COLUMN column_types_json TEXT NOT NULL DEFAULT '{}'")
+        if "type_inference_version" not in table_columns:
+            db.execute("ALTER TABLE _mml_snapshot_tables ADD COLUMN type_inference_version INTEGER NOT NULL DEFAULT 0")
 
 
 def insert_snapshot(snapshot_id: str, name: str, network_element: str, loaded_at: str, tables: Dict) -> None:
@@ -125,10 +158,18 @@ def insert_snapshot(snapshot_id: str, name: str, network_element: str, loaded_at
         )
         for table_name, commands in tables.items():
             columns = sorted({key for command in commands for key in command["values"]})
+            column_types = _infer_column_types(commands, columns)
             db.execute(
-                "INSERT INTO _mml_snapshot_tables(snapshot_id, table_name, columns_json, row_count) "
-                "VALUES (?, ?, ?, ?)",
-                (snapshot_id, table_name, json.dumps(columns, ensure_ascii=False), len(commands)),
+                "INSERT INTO _mml_snapshot_tables"
+                "(snapshot_id, table_name, columns_json, column_types_json, type_inference_version, row_count) "
+                "VALUES (?, ?, ?, ?, 1, ?)",
+                (
+                    snapshot_id,
+                    table_name,
+                    json.dumps(columns, ensure_ascii=False),
+                    json.dumps(column_types, ensure_ascii=False),
+                    len(commands),
+                ),
             )
             sql = (
                 "INSERT INTO _mml_snapshot_rows(snapshot_id, table_name, cmd_type, values_json) " "VALUES (?, ?, ?, ?)"
@@ -156,6 +197,7 @@ def insert_snapshot_stream(
     """Atomically persist an iterator of parsed commands in bounded batches."""
     init_snapshot_schema()
     columns_by_table: Dict[str, set] = {}
+    types_by_table: Dict[str, Dict[str, str | None]] = {}
     counts: Dict[str, int] = {}
     total = 0
     sql = "INSERT INTO _mml_snapshot_rows(snapshot_id, table_name, cmd_type, values_json) " "VALUES (?, ?, ?, ?)"
@@ -169,6 +211,7 @@ def insert_snapshot_stream(
             table_name = command["table"]
             if table_name not in columns_by_table:
                 columns_by_table[table_name] = set()
+                types_by_table[table_name] = {}
                 counts[table_name] = 0
                 db.execute(
                     "INSERT INTO _mml_snapshot_tables(snapshot_id, table_name, columns_json, row_count) "
@@ -176,6 +219,8 @@ def insert_snapshot_stream(
                     (snapshot_id, table_name),
                 )
             columns_by_table[table_name].update(command["values"])
+            for column, value in command["values"].items():
+                types_by_table[table_name][column] = _merge_data_type(types_by_table[table_name].get(column), value)
             counts[table_name] += 1
             total += 1
             batch.append(
@@ -194,9 +239,18 @@ def insert_snapshot_stream(
         if not total:
             raise ValueError("未找到有效的MML命令")
         for table_name, columns in columns_by_table.items():
+            column_types = {column: types_by_table[table_name].get(column) or "string" for column in sorted(columns)}
             db.execute(
-                "UPDATE _mml_snapshot_tables SET columns_json=?, row_count=? " "WHERE snapshot_id=? AND table_name=?",
-                (json.dumps(sorted(columns), ensure_ascii=False), counts[table_name], snapshot_id, table_name),
+                "UPDATE _mml_snapshot_tables SET columns_json=?, column_types_json=?, "
+                "type_inference_version=1, row_count=? "
+                "WHERE snapshot_id=? AND table_name=?",
+                (
+                    json.dumps(sorted(columns), ensure_ascii=False),
+                    json.dumps(column_types, ensure_ascii=False),
+                    counts[table_name],
+                    snapshot_id,
+                    table_name,
+                ),
             )
         db.execute(
             "INSERT INTO _mml_state(key, value) VALUES ('active_snapshot_id', ?) "
@@ -266,14 +320,55 @@ def get_snapshot_tables(snapshot_id: str) -> List[Dict]:
     init_snapshot_schema()
     with DatabaseConnection() as db:
         rows = db.execute(
-            "SELECT table_name, columns_json, row_count FROM _mml_snapshot_tables "
+            "SELECT table_name, columns_json, column_types_json, type_inference_version, row_count "
+            "FROM _mml_snapshot_tables "
             "WHERE snapshot_id=? ORDER BY table_name COLLATE NOCASE",
             (snapshot_id,),
         ).fetchall()
-        return [
-            {"table_name": row["table_name"], "columns": json.loads(row["columns_json"]), "count": row["row_count"]}
-            for row in rows
-        ]
+        observed_types: Dict[tuple[str, str], set[str]] = {}
+        if any(row["type_inference_version"] < 1 for row in rows):
+            type_rows = db.execute(
+                "SELECT r.table_name, j.key, j.type FROM _mml_snapshot_rows r "
+                "JOIN _mml_snapshot_tables t ON t.snapshot_id=r.snapshot_id AND t.table_name=r.table_name, "
+                "json_each(r.values_json) j "
+                "WHERE r.snapshot_id=? AND t.type_inference_version<1 "
+                "GROUP BY r.table_name, j.key, j.type",
+                (snapshot_id,),
+            ).fetchall()
+            for type_row in type_rows:
+                observed_types.setdefault((type_row["table_name"], type_row["key"]), set()).add(type_row["type"])
+
+        result = []
+        for row in rows:
+            columns = json.loads(row["columns_json"])
+            column_types = json.loads(row["column_types_json"] or "{}")
+            if row["type_inference_version"] < 1:
+                for column in columns:
+                    json_types = observed_types.get((row["table_name"], column), set()) - {"null"}
+                    if not json_types:
+                        column_types.setdefault(column, "string")
+                    elif json_types <= {"true", "false"}:
+                        column_types[column] = "boolean"
+                    elif json_types == {"integer"}:
+                        column_types[column] = "integer"
+                    elif json_types <= {"integer", "real"}:
+                        column_types[column] = "decimal"
+                    else:
+                        column_types[column] = "string"
+                db.execute(
+                    "UPDATE _mml_snapshot_tables SET column_types_json=?, type_inference_version=1 "
+                    "WHERE snapshot_id=? AND table_name=?",
+                    (json.dumps(column_types, ensure_ascii=False), snapshot_id, row["table_name"]),
+                )
+            result.append(
+                {
+                    "table_name": row["table_name"],
+                    "columns": columns,
+                    "column_types": column_types,
+                    "count": row["row_count"],
+                }
+            )
+        return result
 
 
 def query_snapshot_rows(
@@ -345,6 +440,96 @@ def query_all_snapshot_rows(snapshot_id: str, table_name: str) -> List[Dict]:
         return [
             {"id": row["id"], "cmd_type": row["cmd_type"], "values": json.loads(row["values_json"])} for row in rows
         ]
+
+
+def create_snapshot_table(
+    snapshot_id: str, table_name: str, columns: List[str], column_types: Dict[str, str] | None = None
+) -> None:
+    with DatabaseConnection() as db:
+        try:
+            db.execute(
+                "INSERT INTO _mml_snapshot_tables"
+                "(snapshot_id, table_name, columns_json, column_types_json, type_inference_version, row_count) "
+                "VALUES (?, ?, ?, ?, 1, 0)",
+                (
+                    snapshot_id,
+                    table_name,
+                    json.dumps(columns, ensure_ascii=False),
+                    json.dumps(column_types or {}, ensure_ascii=False),
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise ValueError(f"表 {table_name} 已存在") from exc
+
+
+def update_snapshot_table(
+    snapshot_id: str,
+    original_table_name: str,
+    table_name: str,
+    columns: List[str],
+    column_types: Dict[str, str],
+    rows: List[Dict],
+) -> None:
+    """Atomically update a table definition and its normalized row payloads."""
+    columns_json = json.dumps(columns, ensure_ascii=False)
+    types_json = json.dumps(column_types, ensure_ascii=False)
+    with DatabaseConnection() as db:
+        existing = db.execute(
+            "SELECT row_count FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+            (snapshot_id, original_table_name),
+        ).fetchone()
+        if not existing:
+            raise ValueError(f"表 {original_table_name} 不存在")
+
+        if table_name != original_table_name:
+            duplicate = db.execute(
+                "SELECT 1 FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+                (snapshot_id, table_name),
+            ).fetchone()
+            if duplicate:
+                raise ValueError(f"表 {table_name} 已存在")
+            db.execute(
+                "INSERT INTO _mml_snapshot_tables"
+                "(snapshot_id, table_name, columns_json, column_types_json, type_inference_version, row_count) "
+                "VALUES (?, ?, ?, ?, 1, ?)",
+                (snapshot_id, table_name, columns_json, types_json, existing["row_count"]),
+            )
+            for row in rows:
+                db.execute(
+                    "UPDATE _mml_snapshot_rows SET table_name=?, values_json=? "
+                    "WHERE snapshot_id=? AND table_name=? AND id=?",
+                    (
+                        table_name,
+                        json.dumps(row["values"], ensure_ascii=False),
+                        snapshot_id,
+                        original_table_name,
+                        row["id"],
+                    ),
+                )
+            db.execute(
+                "DELETE FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+                (snapshot_id, original_table_name),
+            )
+        else:
+            db.execute(
+                "UPDATE _mml_snapshot_tables SET columns_json=?, column_types_json=?, type_inference_version=1 "
+                "WHERE snapshot_id=? AND table_name=?",
+                (columns_json, types_json, snapshot_id, original_table_name),
+            )
+            for row in rows:
+                db.execute(
+                    "UPDATE _mml_snapshot_rows SET values_json=? WHERE snapshot_id=? AND table_name=? AND id=?",
+                    (json.dumps(row["values"], ensure_ascii=False), snapshot_id, original_table_name, row["id"]),
+                )
+
+
+def delete_snapshot_table(snapshot_id: str, table_name: str) -> bool:
+    with DatabaseConnection() as db:
+        cursor = db.execute(
+            "DELETE FROM _mml_snapshot_tables WHERE snapshot_id=? AND table_name=?",
+            (snapshot_id, table_name),
+        )
+        return cursor.rowcount > 0
 
 
 def insert_snapshot_row(snapshot_id: str, table_name: str, cmd_type: str, values: Dict) -> int:

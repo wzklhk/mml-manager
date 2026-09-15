@@ -7,10 +7,12 @@
 """
 import os
 import csv
+import json
+import math
+from datetime import date, time
 from typing import Dict, List, Optional, Tuple
 
 from .table import MmlDataSet, TableGroup, MmlConfig
-from .mml import quote_mml_value
 
 
 # ============================================================
@@ -50,7 +52,7 @@ def write_excel(file_path: str, dataset: MmlDataSet, styled: bool = True):
 
         for row_idx, config in enumerate(group.configs, 2 if styled else 2):
             values = config.values
-            row_data = [_str_val(values.get(col, "")) for col in columns]
+            row_data = [values.get(col, "") for col in columns]
             _write_excel_row(ws, row_idx, row_data)
 
         # 自动列宽
@@ -183,10 +185,10 @@ def read_csv(file_path: str, table_name: Optional[str] = None, pick_fields: Opti
             kv = {}
             has_value = False
             for key in valid_headers:
-                val = row.get(key, "").strip() if row.get(key) else ""
-                if val:
+                val = row.get(key) or ""
+                if val.strip():
                     has_value = True
-                    kv[key] = quote_mml_value(val)
+                    kv[key] = parse_csv_value(val)
                 else:
                     kv[key] = ""
             if not has_value:
@@ -248,15 +250,6 @@ def read_csv_batch(directory: str, output_dir: str, cmd_type: str = "SET") -> Mm
 # ============================================================
 
 
-def _str_val(v) -> str:
-    """值转字符串，数值优化"""
-    if v is None or v == "":
-        return ""
-    if isinstance(v, float):
-        return str(int(v)) if v == int(v) else str(v)
-    return str(v)
-
-
 def _write_excel_header(ws, columns):
     """写入带样式的Excel表头"""
     from openpyxl.styles import Font, Alignment, PatternFill
@@ -274,7 +267,16 @@ def _write_excel_header(ws, columns):
 def _write_excel_row(ws, row_idx, data):
     """写入一行Excel数据"""
     for ci, val in enumerate(data, 1):
-        ws.cell(row=row_idx, column=ci, value=val)
+        write_excel_cell(ws, row_idx, ci, val)
+
+
+def write_excel_cell(ws, row_idx, column_idx, value):
+    """按原始标量类型写入单元格，并确保字符串不会被识别为公式。"""
+    cell = ws.cell(row=row_idx, column=column_idx, value="" if value is None else value)
+    if isinstance(value, str):
+        cell.data_type = "s"
+        cell.number_format = "@"
+    return cell
 
 
 def _auto_column_width(ws, columns, configs):
@@ -321,11 +323,42 @@ def _build_kv_from_row(row, headers, indices, skip_empty):
     has_value = False
     for idx, key in zip(indices, headers):
         val = row[idx] if idx < len(row) else None
-        qv = quote_mml_value(val)
-        if qv:
+        normalized = normalize_excel_value(val)
+        if normalized not in (None, ""):
             has_value = True
-        kv[key] = qv
+        kv[key] = normalized
     return kv if (has_value or not skip_empty) else None
+
+
+def _reject_json_constant(token):
+    raise ValueError(token)
+
+
+def parse_csv_value(value):
+    """推断 CSV 标量类型；无法无歧义识别的内容保留为字符串。"""
+    if value is None:
+        return ""
+    stripped = value.strip()
+    if not stripped:
+        return ""
+    try:
+        parsed = json.loads(stripped, parse_constant=_reject_json_constant)
+    except (json.JSONDecodeError, ValueError):
+        return value
+    if isinstance(parsed, float) and not math.isfinite(parsed):
+        return value
+    return parsed if isinstance(parsed, (str, int, float, bool)) or parsed is None else value
+
+
+def normalize_excel_value(value):
+    """将 Excel 单元格值规范为可持久化的 JSON 标量，同时保留数字/字符串类型。"""
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else str(value)
+    if isinstance(value, (date, time)):
+        return value.isoformat()
+    return str(value)
 
 
 def _filter_headers(fieldnames, pick_fields):

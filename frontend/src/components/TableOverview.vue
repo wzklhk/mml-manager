@@ -17,9 +17,12 @@
           />
         </div>
         <div class="mml-actions">
+          <el-button type="primary" :disabled="!canManageTables" @click="$emit('add-table')">
+            {{ $t("overview.add_table") }}
+          </el-button>
           <el-dropdown :disabled="!canExport" @command="$emit('export-all', $event)">
-            <el-button :disabled="!canExport">
-              {{ $t("export.all") }}<i class="el-icon-arrow-down el-icon--right"></i>
+            <el-button type="primary" :disabled="!canExport">
+              {{ $t("export.all") }}
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -29,7 +32,6 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button @click="$emit('refresh')">{{ $t("overview.refresh") }}</el-button>
         </div>
       </div>
     </el-card>
@@ -46,14 +48,34 @@
         </el-table-column>
         <el-table-column :label="$t('overview.columns')" min-width="320">
           <template #default="scope">
-            <el-tag v-for="col in scope.row.columns" :key="col" size="small" class="col-tag">{{ col }}</el-tag>
+            <el-tag v-for="col in scope.row.columns" :key="col" size="small" class="col-tag">
+              {{ col }} · {{ typeLabel(scope.row.column_types?.[col]) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column :label="$t('overview.row_count')" prop="count" width="100" sortable="custom" align="center" />
         <el-table-column :label="$t('overview.created_at')" prop="created_at" width="180" sortable="custom" />
-        <el-table-column :label="$t('overview.actions')" width="112" align="right" fixed="right">
+        <el-table-column
+          :label="$t('overview.actions')"
+          :width="actionColumnWidth || undefined"
+          fixed="right"
+          header-align="left"
+          class-name="actions-column"
+          label-class-name="actions-column-header"
+        >
+          <template #header>
+            <span class="actions-column-title">{{ $t("overview.actions") }}</span>
+          </template>
           <template #default="scope">
-            <el-button size="small" @click="$emit('enter-table', scope.row)">{{ $t("overview.view") }}</el-button>
+            <div class="mml-row-actions">
+              <el-button size="small" @click="$emit('enter-table', scope.row)">{{ $t("overview.view") }}</el-button>
+              <el-button size="small" plain @click="$emit('edit-table', scope.row)">
+                {{ $t("overview.edit") }}
+              </el-button>
+              <el-button size="small" type="danger" plain @click="$emit('delete-table', scope.row)">
+                {{ $t("overview.delete") }}
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -74,18 +96,49 @@
 </template>
 
 <script>
+import { measureActionColumnWidth } from "../utils/actionColumnWidth";
+
 export default {
   name: "TableOverview",
   props: {
     tables: { type: Array, default: () => [] },
     canExport: { type: Boolean, default: false },
+    canManageTables: { type: Boolean, default: false },
     modelValue: { type: String, default: "" },
     pagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },
   },
+  data() {
+    return {
+      actionColumnWidth: null,
+      actionResizeFrame: null,
+    };
+  },
+  mounted() {
+    this.queueActionColumnResize();
+  },
+  updated() {
+    this.queueActionColumnResize();
+  },
+  beforeUnmount() {
+    window.cancelAnimationFrame(this.actionResizeFrame);
+  },
   methods: {
+    queueActionColumnResize() {
+      if (this.actionResizeFrame) return;
+      this.actionResizeFrame = window.requestAnimationFrame(() => {
+        this.actionResizeFrame = null;
+        const measuredWidth = measureActionColumnWidth(this.$el);
+        if (measuredWidth && measuredWidth !== this.actionColumnWidth) {
+          this.actionColumnWidth = measuredWidth;
+        }
+      });
+    },
     onSort({ prop, order }) {
       if (!prop || !order) return;
       this.$emit("sort", { prop, order });
+    },
+    typeLabel(dataType) {
+      return dataType ? this.$t(`overview.type_${dataType}`) : this.$t("overview.type_unknown");
     },
   },
 };
@@ -142,5 +195,12 @@ export default {
   display: flex;
   justify-content: flex-end;
   overflow-x: auto;
+}
+:deep(td.actions-column .cell) {
+  display: flex;
+  justify-content: flex-end;
+}
+.actions-column-title {
+  display: inline-block;
 }
 </style>

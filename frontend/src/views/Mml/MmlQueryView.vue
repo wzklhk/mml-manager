@@ -9,7 +9,7 @@
       @upload-start="handleUploadStart"
       @upload-success="handleUploadSuccess"
       @upload-error="handleUploadError"
-      @compare="compareDialogVisible = true"
+      @snapshot-create="createConfiguration"
       @snapshot-change="switchSnapshot"
       @snapshot-delete="deleteSnapshot"
       @logo-click="backToOverview"
@@ -35,9 +35,12 @@
           v-model="tableSearch"
           :tables="pagedTables"
           :can-export="tables.length > 0"
+          :can-manage-tables="Boolean(activeSnapshotId)"
           :pagination="tablePagination"
           @enter-table="enterTable"
-          @refresh="loadTables"
+          @add-table="addTable"
+          @edit-table="editTable"
+          @delete-table="deleteTable"
           @export-all="exportAll"
           @sort="handleOverviewSort"
           @page-change="handleTablePageChange"
@@ -49,6 +52,7 @@
           v-show="selectedTable"
           :table-name="selectedTable"
           :columns="currentColumns"
+          :column-types="currentColumnTypes"
           :configs="configs"
           :loading="loading"
           :selected-rows="selectedRows"
@@ -61,6 +65,7 @@
           @batch-delete="batchDelete"
           @batch-export="batchExport"
           @add-row="showAddRowDialog"
+          @edit-table="editCurrentTable"
           @edit-row="handleEdit"
           @delete-row="handleDelete"
         />
@@ -72,9 +77,10 @@
       :is-new-row="isNewRow"
       :columns="currentColumns"
       :form="editForm"
+      :column-types="currentColumnTypes"
       @save="saveEdit"
     />
-    <CompareDialog v-model:visible="compareDialogVisible" />
+    <AddTableDialog v-model:visible="addTableDialogVisible" :table="editingTable" @submit="saveTableDefinition" />
     <ExportPreviewDialog
       v-model:visible="exportPreviewVisible"
       :loading="exporting"
@@ -95,13 +101,13 @@ import Sidebar from "../../components/Sidebar.vue";
 import TableOverview from "../../components/TableOverview.vue";
 import TableDetail from "../../components/TableDetail.vue";
 import EditDialog from "../../components/EditDialog.vue";
-import CompareDialog from "../../components/CompareDialog.vue";
+import AddTableDialog from "../../components/AddTableDialog.vue";
 import ExportPreviewDialog from "../../components/ExportPreviewDialog.vue";
 import apiClient from "../../api/client";
 
 export default {
   name: "MmlQueryView",
-  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, CompareDialog, ExportPreviewDialog },
+  components: { VueHeader, Sidebar, TableOverview, TableDetail, EditDialog, AddTableDialog, ExportPreviewDialog },
   data() {
     return {
       configs: [],
@@ -110,6 +116,7 @@ export default {
       activeSnapshotId: "",
       selectedTable: "",
       currentColumns: [],
+      currentColumnTypes: {},
       loading: false,
       tableSearch: "",
       selectedRows: [],
@@ -117,12 +124,13 @@ export default {
       pagination: { page: 1, pageSize: 20, total: 0 },
       tablePagination: { page: 1, pageSize: 20, total: 0 },
       editDialogVisible: false,
+      addTableDialogVisible: false,
+      editingTable: null,
       isNewRow: false,
       editForm: {},
       sort: { prop: null, order: null },
       columnFilters: {},
       uploading: false,
-      compareDialogVisible: false,
       exportPreviewVisible: false,
       exporting: false,
       pendingExport: null,
@@ -205,6 +213,27 @@ export default {
       }
     },
 
+    async createConfiguration() {
+      try {
+        const result = await this.$prompt(this.$t("header.new_config_prompt"), this.$t("header.new_config_title"), {
+          confirmButtonText: this.$t("dialog.add"),
+          cancelButtonText: this.$t("dialog.cancel"),
+          customClass: "mml-ui",
+          inputPlaceholder: this.$t("header.new_config_placeholder"),
+          inputValidator: (value) => Boolean(value?.trim()) || this.$t("header.config_name_required"),
+        });
+        const response = await apiClient.post("/api/snapshots", { name: result.value.trim() });
+        this.activeSnapshotId = response.data.snapshot.id;
+        this.backToOverview();
+        await this.loadSnapshots();
+        await this.loadTables();
+        this.$message.success(this.$t("msg.create_config_success"));
+      } catch (e) {
+        if (e === "cancel" || e === "close") return;
+        this.$message.error(this.$t("msg.create_config_fail", { msg: e.response?.data?.error || e.message }));
+      }
+    },
+
     async switchSnapshot(snapshotId) {
       if (!snapshotId || snapshotId === this.activeSnapshotId) return;
       try {
@@ -225,6 +254,7 @@ export default {
         {
           confirmButtonText: this.$t("confirm.btn_confirm"),
           cancelButtonText: this.$t("confirm.btn_cancel"),
+          customClass: "mml-ui",
           type: "warning",
         },
       )
@@ -253,9 +283,90 @@ export default {
       }
     },
 
+    addTable() {
+      this.editingTable = null;
+      this.addTableDialogVisible = true;
+    },
+
+    editTable(table) {
+      this.editingTable = table;
+      this.addTableDialogVisible = true;
+    },
+
+    editCurrentTable() {
+      const table = this.tables.find((item) => item.table_name === this.selectedTable);
+      this.editTable(
+        table || {
+          table_name: this.selectedTable,
+          columns: this.currentColumns,
+          column_types: this.currentColumnTypes,
+        },
+      );
+    },
+
+    async saveTableDefinition({ originalTableName, tableName, fields }) {
+      try {
+        const columns = fields.map((field) => field.name);
+        const columnTypes = Object.fromEntries(fields.map((field) => [field.name, field.dataType]));
+        const columnMapping = Object.fromEntries(
+          fields.filter((field) => field.originalName).map((field) => [field.name, field.originalName]),
+        );
+        const payload = {
+          table_name: tableName,
+          columns,
+          column_types: columnTypes,
+        };
+        let response;
+        if (originalTableName) {
+          response = await apiClient.put("/api/tables", {
+            ...payload,
+            original_table_name: originalTableName,
+            column_mapping: columnMapping,
+          });
+        } else {
+          response = await apiClient.post("/api/tables", payload);
+        }
+        this.addTableDialogVisible = false;
+        this.editingTable = null;
+        await this.loadTables();
+        this.$message.success(this.$t(originalTableName ? "msg.edit_table_success" : "msg.add_table_success"));
+        this.enterTable(response.data.table);
+      } catch (e) {
+        this.$message.error(
+          this.$t(originalTableName ? "msg.edit_table_fail" : "msg.add_table_fail", {
+            msg: e.response?.data?.error || e.message,
+          }),
+        );
+      }
+    },
+
+    deleteTable(table) {
+      this.$confirm(
+        this.$t("confirm.delete_table_content", { name: table.table_name, count: table.count }),
+        this.$t("confirm.delete_table_title"),
+        {
+          confirmButtonText: this.$t("confirm.btn_confirm"),
+          cancelButtonText: this.$t("confirm.btn_cancel"),
+          customClass: "mml-ui",
+          type: "warning",
+        },
+      )
+        .then(async () => {
+          try {
+            await apiClient.post("/api/tables/delete", { table_name: table.table_name });
+            await this.loadTables();
+            this.$message.success(this.$t("msg.delete_table_success"));
+          } catch (e) {
+            this.$message.error(this.$t("msg.delete_table_fail", { msg: e.response?.data?.error || e.message }));
+          }
+        })
+        .catch(() => {});
+    },
+
     enterTable(row) {
       this.selectedTable = row.table_name;
       this.currentColumns = row.columns || [];
+      this.currentColumnTypes = row.column_types || {};
       this.pagination.page = 1;
       this.sort = { prop: null, order: null };
       this.columnFilters = {};
@@ -267,6 +378,7 @@ export default {
     backToOverview() {
       this.selectedTable = "";
       this.currentColumns = [];
+      this.currentColumnTypes = {};
       this.configs = [];
       this.clearSelectedRows();
       this.columnFilters = {};
@@ -350,6 +462,7 @@ export default {
       this.$confirm(this.$t("confirm.batch_delete_content", { count }), this.$t("confirm.batch_delete_title"), {
         confirmButtonText: this.$t("confirm.btn_confirm"),
         cancelButtonText: this.$t("confirm.btn_cancel"),
+        customClass: "mml-ui",
         type: "warning",
       })
         .then(async () => {
@@ -451,7 +564,7 @@ export default {
       this.isNewRow = true;
       this.editForm = {};
       this.currentColumns.forEach((col) => {
-        this.editForm[col] = "";
+        this.editForm[col] = this.currentColumnTypes[col] === "string" || !this.currentColumnTypes[col] ? "" : null;
       });
       this.editDialogVisible = true;
     },
@@ -466,7 +579,7 @@ export default {
       try {
         const configData = {};
         this.currentColumns.forEach((col) => {
-          configData[col] = this.editForm[col] || "";
+          configData[col] = this.editForm[col] ?? "";
         });
         if (this.isNewRow) {
           await apiClient.post("/api/configs", { table_name: this.selectedTable, config_data: configData });
@@ -490,6 +603,7 @@ export default {
       this.$confirm(this.$t("confirm.delete_content"), this.$t("confirm.delete_title"), {
         confirmButtonText: this.$t("confirm.btn_confirm"),
         cancelButtonText: this.$t("confirm.btn_cancel"),
+        customClass: "mml-ui",
         type: "warning",
       })
         .then(async () => {

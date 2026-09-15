@@ -1,14 +1,19 @@
 <template>
   <div class="page-content">
     <div class="page-header">
-      <h2 class="page-title">
-        <i class="el-icon-s-data" style="color: #41b883; margin-right: 8px"></i>
-        {{ tableName }}
-      </h2>
+      <div class="page-title-row">
+        <h2 class="page-title">
+          <i class="el-icon-s-data" style="color: #41b883; margin-right: 8px"></i>
+          {{ tableName }}
+        </h2>
+        <el-button plain @click="$emit('edit-table')">{{ $t("detail.edit_fields") }}</el-button>
+      </div>
       <p class="page-desc">
         {{ columns.length }} {{ $t("detail.columns") }} &middot;
         <template v-for="(col, idx) in columns" :key="col">
-          <code class="inline-code">{{ col }}<span v-if="idx < columns.length - 1">, </span></code>
+          <code class="inline-code">
+            {{ col }} ({{ typeLabel(columnTypes[col]) }})<span v-if="idx < columns.length - 1">, </span>
+          </code>
         </template>
       </p>
     </div>
@@ -25,8 +30,8 @@
             $t("detail.batch_delete")
           }}</el-button>
           <el-dropdown :disabled="selectedRows.length === 0" @command="$emit('batch-export', $event)">
-            <el-button :disabled="selectedRows.length === 0">
-              {{ $t("detail.batch_export") }}<i class="el-icon-arrow-down el-icon--right"></i>
+            <el-button type="primary" :disabled="selectedRows.length === 0">
+              {{ $t("detail.batch_export") }}
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -99,7 +104,22 @@
             <span class="cell-value">{{ scope.row.config_data[col] ?? "-" }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('detail.actions')" width="184" fixed="right" align="right">
+        <el-table-column
+          :label="$t('detail.actions')"
+          :width="actionColumnWidth || undefined"
+          fixed="right"
+          header-align="left"
+          class-name="actions-column"
+          label-class-name="actions-column-header"
+        >
+          <template #header>
+            <div class="column-header">
+              <div class="column-title-row">
+                <span class="column-title actions-column-title">{{ $t("detail.actions") }}</span>
+              </div>
+              <div class="actions-filter-placeholder" aria-hidden="true"></div>
+            </div>
+          </template>
           <template #default="scope">
             <div class="mml-row-actions">
               <el-button size="small" @click="$emit('edit-row', scope.row)">{{ $t("detail.edit") }}</el-button>
@@ -128,11 +148,14 @@
 </template>
 
 <script>
+import { measureActionColumnWidth } from "../utils/actionColumnWidth";
+
 export default {
   name: "TableDetail",
   props: {
     tableName: { type: String, default: "" },
     columns: { type: Array, default: () => [] },
+    columnTypes: { type: Object, default: () => ({}) },
     configs: { type: Array, default: () => [] },
     loading: { type: Boolean, default: false },
     selectedRows: { type: Array, default: () => [] },
@@ -143,6 +166,8 @@ export default {
       columnFilters: {},
       pinnedColumns: [],
       filterTimer: null,
+      actionColumnWidth: null,
+      actionResizeFrame: null,
     };
   },
   computed: {
@@ -169,8 +194,28 @@ export default {
   },
   beforeUnmount() {
     window.clearTimeout(this.filterTimer);
+    window.cancelAnimationFrame(this.actionResizeFrame);
+  },
+  mounted() {
+    this.queueActionColumnResize();
+  },
+  updated() {
+    this.queueActionColumnResize();
   },
   methods: {
+    typeLabel(dataType) {
+      return dataType ? this.$t(`overview.type_${dataType}`) : this.$t("overview.type_unknown");
+    },
+    queueActionColumnResize() {
+      if (this.actionResizeFrame) return;
+      this.actionResizeFrame = window.requestAnimationFrame(() => {
+        this.actionResizeFrame = null;
+        const measuredWidth = measureActionColumnWidth(this.$el);
+        if (measuredWidth && measuredWidth !== this.actionColumnWidth) {
+          this.actionColumnWidth = measuredWidth;
+        }
+      });
+    },
     clearSelection() {
       this.$refs.configTable?.clearSelection();
     },
@@ -217,11 +262,18 @@ export default {
 .page-header {
   margin-bottom: 24px;
 }
+.page-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
 .page-title {
   font-size: 24px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 6px 0;
+  margin: 0;
   display: flex;
   align-items: center;
 }
@@ -308,8 +360,18 @@ export default {
 .column-header :deep(.el-input__wrapper) {
   padding: 0 7px;
 }
+.actions-filter-placeholder {
+  height: var(--el-component-size-small);
+}
+.actions-column-title {
+  flex: none;
+}
 .pagination-wrapper {
   margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+:deep(td.actions-column .cell) {
   display: flex;
   justify-content: flex-end;
 }

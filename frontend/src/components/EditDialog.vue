@@ -9,7 +9,18 @@
   >
     <el-form :model="form" label-width="110px" size="small">
       <el-form-item v-for="col in columns" :key="col" :label="col">
-        <el-input v-model="form[col]" :placeholder="$t('dialog.input_placeholder', { col })" clearable />
+        <el-input-number
+          v-if="columnTypes[col] === 'integer' || columnTypes[col] === 'decimal'"
+          v-model="form[col]"
+          :precision="columnTypes[col] === 'integer' ? 0 : undefined"
+          :placeholder="$t('dialog.input_placeholder', { col })"
+          controls-position="right"
+        />
+        <el-select v-else-if="columnTypes[col] === 'boolean'" v-model="form[col]" clearable>
+          <el-option :label="$t('dialog.boolean_true')" :value="true" />
+          <el-option :label="$t('dialog.boolean_false')" :value="false" />
+        </el-select>
+        <el-input v-else v-model="form[col]" :placeholder="$t('dialog.input_placeholder', { col })" clearable />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -27,6 +38,7 @@ export default {
     isNewRow: { type: Boolean, default: false },
     columns: { type: Array, default: () => [] },
     form: { type: Object, default: () => ({}) },
+    columnTypes: { type: Object, default: () => ({}) },
   },
   computed: {
     dialogVisible: {
