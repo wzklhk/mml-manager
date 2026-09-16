@@ -42,8 +42,7 @@
       role="separator"
       aria-orientation="vertical"
       :aria-label="$t('sidebar.resize')"
-      :aria-valuemin="minSidebarWidth"
-      :aria-valuemax="maxSidebarWidth"
+      :aria-valuemin="0"
       :aria-valuenow="sidebarWidth"
       tabindex="0"
       @pointerdown="beginResize"
@@ -65,10 +64,6 @@
 </template>
 
 <script>
-const MIN_SIDEBAR_WIDTH = 140;
-const MAX_SIDEBAR_WIDTH = 480;
-const MAIN_CONTENT_MIN_WIDTH = 320;
-
 export default {
   name: "Sidebar",
   props: {
@@ -80,8 +75,6 @@ export default {
     return {
       tableSearch: "",
       sidebarWidth: 260,
-      minSidebarWidth: MIN_SIDEBAR_WIDTH,
-      maxSidebarWidth: MAX_SIDEBAR_WIDTH,
       resizing: false,
       resizeStartX: 0,
       resizeStartWidth: 0,
@@ -101,30 +94,16 @@ export default {
       if (value) this.endResize();
     },
   },
-  mounted() {
-    this.updateResizeBounds();
-    window.addEventListener("resize", this.updateResizeBounds);
-  },
   beforeUnmount() {
     this.endResize();
-    window.removeEventListener("resize", this.updateResizeBounds);
   },
   methods: {
-    clampSidebarWidth(width) {
-      return Math.min(this.maxSidebarWidth, Math.max(this.minSidebarWidth, width));
-    },
-    updateResizeBounds() {
-      const availableWidth = this.$el?.parentElement?.clientWidth || window.innerWidth;
-      this.maxSidebarWidth = Math.max(
-        this.minSidebarWidth,
-        Math.min(MAX_SIDEBAR_WIDTH, availableWidth - MAIN_CONTENT_MIN_WIDTH),
-      );
-      this.sidebarWidth = this.clampSidebarWidth(this.sidebarWidth);
+    normalizeSidebarWidth(width) {
+      return Math.max(0, width);
     },
     beginResize(event) {
       if (this.collapsed || event.button !== 0) return;
       event.preventDefault();
-      this.updateResizeBounds();
       this.resizing = true;
       this.resizeStartX = event.clientX;
       this.resizeStartWidth = this.sidebarWidth;
@@ -139,7 +118,7 @@ export default {
     handleResize(event) {
       if (!this.resizing) return;
       event.preventDefault();
-      this.sidebarWidth = this.clampSidebarWidth(this.resizeStartWidth + event.clientX - this.resizeStartX);
+      this.sidebarWidth = this.normalizeSidebarWidth(this.resizeStartWidth + event.clientX - this.resizeStartX);
     },
     endResize() {
       if (!this.resizing) return;
@@ -155,12 +134,11 @@ export default {
       const nextWidths = {
         ArrowLeft: this.sidebarWidth - step,
         ArrowRight: this.sidebarWidth + step,
-        Home: this.minSidebarWidth,
-        End: this.maxSidebarWidth,
+        Home: 0,
       };
       if (!(event.key in nextWidths)) return;
       event.preventDefault();
-      this.sidebarWidth = this.clampSidebarWidth(nextWidths[event.key]);
+      this.sidebarWidth = this.normalizeSidebarWidth(nextWidths[event.key]);
     },
   },
 };
