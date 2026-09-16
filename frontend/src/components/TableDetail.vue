@@ -55,7 +55,6 @@
         v-loading="loading"
         border
         stripe
-        max-height="560"
         @sort-change="onSort"
         @selection-change="$emit('selection-change', $event)"
       >
@@ -256,8 +255,7 @@ export default {
 
 <style scoped>
 .page-content {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
 }
 .page-header {
   margin-bottom: 24px;

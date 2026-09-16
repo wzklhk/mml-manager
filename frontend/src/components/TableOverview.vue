@@ -146,8 +146,7 @@ export default {
 
 <style scoped>
 .page-content {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
 }
 .page-header {
   margin-bottom: 24px;
