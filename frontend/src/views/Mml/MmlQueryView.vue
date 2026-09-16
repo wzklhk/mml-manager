@@ -5,13 +5,16 @@
       :selected-table="selectedTable"
       :snapshots="snapshots"
       :active-snapshot-id="activeSnapshotId"
+      :can-export="tables.length > 0"
       @menu-select="handleMenuSelect"
       @upload-start="handleUploadStart"
       @upload-success="handleUploadSuccess"
       @upload-error="handleUploadError"
       @snapshot-create="createConfiguration"
       @snapshot-change="switchSnapshot"
+      @snapshot-rename="renameSnapshot"
       @snapshot-delete="deleteSnapshot"
+      @export-all="exportAll"
       @logo-click="backToOverview"
     />
 
@@ -34,14 +37,12 @@
           v-show="!selectedTable"
           v-model="tableSearch"
           :tables="pagedTables"
-          :can-export="tables.length > 0"
           :can-manage-tables="Boolean(activeSnapshotId)"
           :pagination="tablePagination"
           @enter-table="enterTable"
           @add-table="addTable"
           @edit-table="editTable"
           @delete-table="deleteTable"
-          @export-all="exportAll"
           @sort="handleOverviewSort"
           @page-change="handleTablePageChange"
           @size-change="handleTableSizeChange"
@@ -243,6 +244,33 @@ export default {
         await this.loadTables();
       } catch (e) {
         this.$message.error(this.$t("msg.switch_snapshot_fail", { msg: e.message }));
+      }
+    },
+
+    async renameSnapshot(snapshotId) {
+      const snapshot = this.snapshots.find((item) => item.id === snapshotId);
+      if (!snapshot) return;
+      try {
+        const result = await this.$prompt(
+          this.$t("header.rename_config_prompt"),
+          this.$t("header.rename_config_title"),
+          {
+            confirmButtonText: this.$t("dialog.save"),
+            cancelButtonText: this.$t("dialog.cancel"),
+            customClass: "mml-ui",
+            inputValue: snapshot.name,
+            inputPlaceholder: this.$t("header.new_config_placeholder"),
+            inputValidator: (value) => Boolean(value?.trim()) || this.$t("header.config_name_required"),
+          },
+        );
+        const name = result.value.trim();
+        if (name === snapshot.name) return;
+        await apiClient.put(`/api/snapshots/${snapshotId}`, { name });
+        await this.loadSnapshots();
+        this.$message.success(this.$t("msg.rename_config_success"));
+      } catch (e) {
+        if (e === "cancel" || e === "close") return;
+        this.$message.error(this.$t("msg.rename_config_fail", { msg: e.response?.data?.error || e.message }));
       }
     },
 

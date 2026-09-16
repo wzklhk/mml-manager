@@ -20,18 +20,6 @@
           <el-button type="primary" :disabled="!canManageTables" @click="$emit('add-table')">
             {{ $t("overview.add_table") }}
           </el-button>
-          <el-dropdown :disabled="!canExport" @command="$emit('export-all', $event)">
-            <el-button type="primary" :disabled="!canExport">
-              {{ $t("export.all") }}
-            </el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="mml">MML</el-dropdown-item>
-                <el-dropdown-item command="csv">CSV</el-dropdown-item>
-                <el-dropdown-item command="xlsx">Excel (.xlsx)</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
         </div>
       </div>
     </el-card>
@@ -102,7 +90,6 @@ export default {
   name: "TableOverview",
   props: {
     tables: { type: Array, default: () => [] },
-    canExport: { type: Boolean, default: false },
     canManageTables: { type: Boolean, default: false },
     modelValue: { type: String, default: "" },
     pagination: { type: Object, default: () => ({ page: 1, pageSize: 20, total: 0 }) },

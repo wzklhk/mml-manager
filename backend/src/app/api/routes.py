@@ -181,6 +181,17 @@ def activate_snapshot(snapshot_id: str):
         return _error(str(exc), 404)
 
 
+@api.put("/snapshots/{snapshot_id}")
+def rename_snapshot(snapshot_id: str, data: dict[str, Any] | None = None):
+    data = data or {}
+    try:
+        snapshot = mml_service.rename_configuration(snapshot_id, data.get("name"))
+        return {"message": "配置名称修改成功", "snapshot": snapshot}
+    except ValueError as exc:
+        status_code = 404 if str(exc) == "配置不存在" else 400
+        return _error(str(exc), status_code)
+
+
 @api.delete("/snapshots/{snapshot_id}")
 @api.post("/snapshots/{snapshot_id}/delete")
 def delete_snapshot(snapshot_id: str):

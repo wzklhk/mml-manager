@@ -34,6 +34,23 @@ KEY_FIELD_CANDIDATES = (
 EXPORT_FORMATS = {"mml", "csv", "xlsx"}
 
 
+def _validate_configuration_name(name: str) -> str:
+    if not isinstance(name, str):
+        raise ValueError("配置名称格式无效")
+    name = name.strip()
+    if not name:
+        raise ValueError("配置名称不能为空")
+    if len(name) > 128 or re.search(r"[\r\n]", name):
+        raise ValueError("配置名称不能超过 128 个字符或包含换行")
+    return name
+
+
+def _uploaded_file_name(name: str) -> str:
+    """Keep imported configuration names stable and independent of import time."""
+    filename = re.split(r"[/\\]", name)[-1].strip()
+    return _validate_configuration_name(filename)
+
+
 def decode_mml_bytes(content: bytes) -> str:
     """Decode common network-element export encodings."""
     for encoding in ("utf-8-sig", "gb18030"):
@@ -175,6 +192,7 @@ def import_mml_file(file_path: str) -> Dict:
 
 def import_mml_stream(binary_stream, name: str, network_element: str | None = None) -> Dict:
     """Decode, parse and persist an MML stream with bounded working memory."""
+    name = _uploaded_file_name(name)
     last_error = None
     for encoding in ("utf-8-sig", "gb18030"):
         binary_stream.seek(0)
@@ -251,6 +269,7 @@ def _iter_excel_commands(binary_stream):
 
 def import_configuration_stream(binary_stream, name: str, network_element: str | None = None) -> Dict:
     """Import MML, CSV, or XLSX content while preserving scalar value types."""
+    name = _uploaded_file_name(name)
     extension = os.path.splitext(name)[1].lower()
     if extension in (".mml", ".txt"):
         return import_mml_stream(binary_stream, name, network_element)
@@ -290,13 +309,7 @@ def get_snapshots() -> Dict:
 
 
 def create_configuration(name: str) -> Dict:
-    if not isinstance(name, str):
-        raise ValueError("配置名称格式无效")
-    name = name.strip()
-    if not name:
-        raise ValueError("配置名称不能为空")
-    if len(name) > 128 or re.search(r"[\r\n]", name):
-        raise ValueError("配置名称不能超过 128 个字符或包含换行")
+    name = _validate_configuration_name(name)
     snapshot = store.add_snapshot({}, name)
     return {
         "message": "配置创建成功",
@@ -304,6 +317,11 @@ def create_configuration(name: str) -> Dict:
         "total_count": 0,
         "snapshot": snapshot,
     }
+
+
+def rename_configuration(snapshot_id: str, name: str) -> Dict:
+    name = _validate_configuration_name(name)
+    return store.rename_snapshot(snapshot_id, name)
 
 
 def activate_snapshot(snapshot_id: str) -> Dict:

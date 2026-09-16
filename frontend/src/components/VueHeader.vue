@@ -4,35 +4,23 @@
       <el-button @click="$emit('menu-select', 'overview')">
         {{ $t("header.table_overview") }}
       </el-button>
+      <span v-if="selectedTable" class="selected-table-name">{{ selectedTable }}</span>
+    </div>
+    <div class="header-right configuration-actions">
       <el-select
-        v-if="snapshots.length"
         :model-value="activeSnapshotId"
         class="snapshot-select"
         popper-class="snapshot-select-dropdown"
         size="default"
+        :disabled="!snapshots.length"
         :title="activeSnapshotLabel"
         :placeholder="$t('header.select_config')"
         @change="$emit('snapshot-change', $event)"
       >
         <el-option v-for="item in snapshots" :key="item.id" :label="snapshotLabel(item)" :value="item.id">
-          <div class="snapshot-option">
-            <span class="snapshot-option-label" :title="snapshotLabel(item)">{{ snapshotLabel(item) }}</span>
-            <button
-              type="button"
-              class="snapshot-delete-button"
-              :title="$t('header.delete_config')"
-              :aria-label="$t('header.delete_config')"
-              @mousedown.stop.prevent
-              @click.stop="$emit('snapshot-delete', item.id)"
-            >
-              ×
-            </button>
-          </div>
+          <span class="snapshot-option-label" :title="snapshotLabel(item)">{{ snapshotLabel(item) }}</span>
         </el-option>
       </el-select>
-      <span v-if="selectedTable" class="selected-table-name">{{ selectedTable }}</span>
-    </div>
-    <div class="header-right">
       <el-button size="default" type="primary" @click="$emit('snapshot-create')">
         {{ $t("header.new_config") }}
       </el-button>
@@ -49,6 +37,30 @@
           {{ $t("header.import_config") }}
         </el-button>
       </el-upload>
+      <el-dropdown :disabled="!canExport" @command="$emit('export-all', $event)">
+        <el-button :disabled="!canExport">
+          {{ $t("export.configuration") }}
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="mml">MML</el-dropdown-item>
+            <el-dropdown-item command="csv">CSV</el-dropdown-item>
+            <el-dropdown-item command="xlsx">Excel (.xlsx)</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+      <el-button size="default" :disabled="!activeSnapshotId" @click="$emit('snapshot-rename', activeSnapshotId)">
+        {{ $t("header.rename_config") }}
+      </el-button>
+      <el-button
+        size="default"
+        type="danger"
+        plain
+        :disabled="!activeSnapshotId"
+        @click="$emit('snapshot-delete', activeSnapshotId)"
+      >
+        {{ $t("header.delete_config") }}
+      </el-button>
     </div>
   </el-header>
 </template>
@@ -63,6 +75,7 @@ export default {
     selectedTable: { type: String, default: "" },
     snapshots: { type: Array, default: () => [] },
     activeSnapshotId: { type: String, default: "" },
+    canExport: { type: Boolean, default: false },
   },
   computed: {
     activeSnapshotLabel() {
@@ -75,9 +88,7 @@ export default {
   },
   methods: {
     snapshotLabel(item) {
-      const importedAt = item.loaded_at ? item.loaded_at.replace("T", " ").slice(0, 19) : "";
-      const names = item.name && item.name !== item.network_element ? [item.network_element, item.name] : [item.name];
-      return [...names, importedAt].filter(Boolean).join(" · ");
+      return item.name || item.network_element || "";
     },
     beforeUpload(file) {
       if (![".mml", ".txt", ".csv", ".xlsx"].some((ext) => file.name.toLowerCase().endsWith(ext))) {
@@ -148,39 +159,12 @@ export default {
 :global(.snapshot-select-dropdown .el-select-dropdown__item) {
   padding-right: 8px;
 }
-.snapshot-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  width: 100%;
-}
 .snapshot-option-label {
-  flex: 1;
-  min-width: 0;
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.snapshot-delete-button {
-  flex: none;
-  margin-left: auto;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  color: var(--text-muted);
-  background: transparent;
-  font-size: 18px;
-  line-height: 22px;
-  cursor: pointer;
-}
-.snapshot-delete-button:hover,
-.snapshot-delete-button:focus-visible {
-  color: var(--el-color-danger);
-  background: var(--el-color-danger-light-9);
-  outline: none;
 }
 .header-upload {
   display: inline-flex;
