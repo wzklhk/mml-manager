@@ -152,9 +152,7 @@ export default {
       }
     },
     snapshotLabel(item) {
-      const importedAt = item.loaded_at ? item.loaded_at.replace("T", " ").slice(0, 19) : "";
-      const names = item.name && item.name !== item.network_element ? [item.network_element, item.name] : [item.name];
-      return [...names, importedAt].filter(Boolean).join(" · ");
+      return item.name || item.network_element || "";
     },
     clearResult() {
       this.result = null;

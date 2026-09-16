@@ -160,6 +160,36 @@ def test_create_empty_configuration_endpoint():
     assert tables.json()["tables"] == []
 
 
+def test_configuration_name_can_be_changed():
+    created = mml_service.import_mml_text("SET CELL:ID=1;", "original.mml")
+
+    with TestClient(app) as client:
+        renamed = client.put(
+            f"/api/snapshots/{created['snapshot']['id']}",
+            json={"name": "renamed configuration"},
+        )
+        listed = client.get("/api/snapshots")
+
+    assert renamed.status_code == 200
+    assert renamed.json()["snapshot"]["name"] == "renamed configuration"
+    assert next(item for item in listed.json()["snapshots"] if item["id"] == created["snapshot"]["id"])["name"] == (
+        "renamed configuration"
+    )
+
+
+def test_configuration_name_change_validates_input_and_missing_snapshot():
+    created = mml_service.create_configuration("Original")
+
+    with TestClient(app) as client:
+        empty = client.put(f"/api/snapshots/{created['snapshot']['id']}", json={"name": "  "})
+        missing = client.put("/api/snapshots/not-found", json={"name": "Valid"})
+
+    assert empty.status_code == 400
+    assert empty.json() == {"error": "配置名称不能为空"}
+    assert missing.status_code == 404
+    assert missing.json() == {"error": "配置不存在"}
+
+
 def test_create_and_delete_table_endpoints():
     mml_service.import_mml_text("SET EXISTING:ID=1;", "tables.mml")
 

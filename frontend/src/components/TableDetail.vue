@@ -26,11 +26,9 @@
           }}
         </span>
         <div class="mml-actions">
-          <el-button type="danger" plain :disabled="selectedRows.length === 0" @click="$emit('batch-delete')">{{
-            $t("detail.batch_delete")
-          }}</el-button>
+          <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.add_config") }}</el-button>
           <el-dropdown :disabled="selectedRows.length === 0" @command="$emit('batch-export', $event)">
-            <el-button type="primary" :disabled="selectedRows.length === 0">
+            <el-button :disabled="selectedRows.length === 0">
               {{ $t("detail.batch_export") }}
             </el-button>
             <template #dropdown>
@@ -41,7 +39,9 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
-          <el-button type="primary" @click="$emit('add-row')">{{ $t("detail.add_config") }}</el-button>
+          <el-button type="danger" plain :disabled="selectedRows.length === 0" @click="$emit('batch-delete')">{{
+            $t("detail.batch_delete")
+          }}</el-button>
         </div>
       </div>
     </el-card>
@@ -55,7 +55,6 @@
         v-loading="loading"
         border
         stripe
-        max-height="560"
         @sort-change="onSort"
         @selection-change="$emit('selection-change', $event)"
       >
@@ -256,8 +255,7 @@ export default {
 
 <style scoped>
 .page-content {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
 }
 .page-header {
   margin-bottom: 24px;

@@ -286,6 +286,17 @@ def activate_snapshot_persistent(snapshot_id: str) -> Optional[Dict]:
         return dict(row)
 
 
+def rename_snapshot_persistent(snapshot_id: str, name: str) -> Optional[Dict]:
+    """Rename a configuration set without changing its import metadata."""
+    init_snapshot_schema()
+    with DatabaseConnection() as db:
+        updated = db.execute("UPDATE _mml_snapshots SET name=? WHERE id=?", (name, snapshot_id))
+        if not updated.rowcount:
+            return None
+        row = db.execute("SELECT * FROM _mml_snapshots WHERE id=?", (snapshot_id,)).fetchone()
+        return dict(row)
+
+
 def delete_snapshot_persistent(snapshot_id: str) -> Optional[Dict]:
     """Delete a complete configuration set and select a safe active fallback."""
     init_snapshot_schema()

@@ -84,6 +84,17 @@ class PersistentConfigStore:
         snapshot["command_count"] = sum(table["count"] for table in tables)
         return self._metadata(snapshot)
 
+    def rename_snapshot(self, snapshot_id, name):
+        with self._lock:
+            snapshot = repository.rename_snapshot_persistent(snapshot_id, name)
+            if snapshot is None:
+                raise ValueError("配置不存在")
+            self._cache.invalidate()
+        tables = repository.get_snapshot_tables(snapshot_id)
+        snapshot["table_count"] = len(tables)
+        snapshot["command_count"] = sum(table["count"] for table in tables)
+        return self._metadata(snapshot)
+
     def delete_snapshot(self, snapshot_id):
         with self._lock:
             deleted = repository.delete_snapshot_persistent(snapshot_id)
