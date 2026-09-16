@@ -441,12 +441,6 @@ a.module-card:hover {
   .module-sidebar {
     width: 156px;
   }
-  .mml-query .sidebar-wrapper .vue-aside {
-    max-width: 200px;
-  }
-  .mml-query .sidebar-wrapper .aside-content {
-    width: 200px;
-  }
 }
 @media (max-width: 760px) {
   .global-header {
@@ -480,11 +474,7 @@ a.module-card:hover {
   .mml-query .vue-main {
     padding: 12px;
   }
-  .mml-query .sidebar-wrapper .vue-aside {
-    max-width: 140px;
-  }
   .mml-query .sidebar-wrapper .aside-content {
-    width: 140px;
     padding: 12px 8px;
   }
 }

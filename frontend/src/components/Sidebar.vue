@@ -1,6 +1,6 @@
 <template>
-  <div class="sidebar-wrapper">
-    <el-aside :width="collapsed ? '0' : '260px'" class="vue-aside">
+  <div class="sidebar-wrapper" :class="{ resizing }">
+    <el-aside :width="collapsed ? '0' : `${sidebarWidth}px`" class="vue-aside">
       <div v-if="!collapsed" class="aside-content">
         <div class="aside-header">
           <h3 class="aside-title">
@@ -35,6 +35,21 @@
       </div>
     </el-aside>
 
+    <div
+      v-if="!collapsed"
+      class="sidebar-resizer"
+      :class="{ active: resizing }"
+      role="separator"
+      aria-orientation="vertical"
+      :aria-label="$t('sidebar.resize')"
+      :aria-valuemin="minSidebarWidth"
+      :aria-valuemax="maxSidebarWidth"
+      :aria-valuenow="sidebarWidth"
+      tabindex="0"
+      @pointerdown="beginResize"
+      @keydown="resizeWithKeyboard"
+    ></div>
+
     <div class="sidebar-toggle-rail">
       <button
         type="button"
@@ -50,6 +65,10 @@
 </template>
 
 <script>
+const MIN_SIDEBAR_WIDTH = 140;
+const MAX_SIDEBAR_WIDTH = 480;
+const MAIN_CONTENT_MIN_WIDTH = 320;
+
 export default {
   name: "Sidebar",
   props: {
@@ -60,6 +79,14 @@ export default {
   data() {
     return {
       tableSearch: "",
+      sidebarWidth: 260,
+      minSidebarWidth: MIN_SIDEBAR_WIDTH,
+      maxSidebarWidth: MAX_SIDEBAR_WIDTH,
+      resizing: false,
+      resizeStartX: 0,
+      resizeStartWidth: 0,
+      previousBodyCursor: "",
+      previousBodyUserSelect: "",
     };
   },
   computed: {
@@ -67,6 +94,73 @@ export default {
       const query = this.tableSearch.trim().toLocaleLowerCase();
       if (!query) return this.tables;
       return this.tables.filter((table) => String(table.table_name).toLocaleLowerCase().includes(query));
+    },
+  },
+  watch: {
+    collapsed(value) {
+      if (value) this.endResize();
+    },
+  },
+  mounted() {
+    this.updateResizeBounds();
+    window.addEventListener("resize", this.updateResizeBounds);
+  },
+  beforeUnmount() {
+    this.endResize();
+    window.removeEventListener("resize", this.updateResizeBounds);
+  },
+  methods: {
+    clampSidebarWidth(width) {
+      return Math.min(this.maxSidebarWidth, Math.max(this.minSidebarWidth, width));
+    },
+    updateResizeBounds() {
+      const availableWidth = this.$el?.parentElement?.clientWidth || window.innerWidth;
+      this.maxSidebarWidth = Math.max(
+        this.minSidebarWidth,
+        Math.min(MAX_SIDEBAR_WIDTH, availableWidth - MAIN_CONTENT_MIN_WIDTH),
+      );
+      this.sidebarWidth = this.clampSidebarWidth(this.sidebarWidth);
+    },
+    beginResize(event) {
+      if (this.collapsed || event.button !== 0) return;
+      event.preventDefault();
+      this.updateResizeBounds();
+      this.resizing = true;
+      this.resizeStartX = event.clientX;
+      this.resizeStartWidth = this.sidebarWidth;
+      this.previousBodyCursor = document.body.style.cursor;
+      this.previousBodyUserSelect = document.body.style.userSelect;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("pointermove", this.handleResize);
+      window.addEventListener("pointerup", this.endResize);
+      window.addEventListener("pointercancel", this.endResize);
+    },
+    handleResize(event) {
+      if (!this.resizing) return;
+      event.preventDefault();
+      this.sidebarWidth = this.clampSidebarWidth(this.resizeStartWidth + event.clientX - this.resizeStartX);
+    },
+    endResize() {
+      if (!this.resizing) return;
+      this.resizing = false;
+      document.body.style.cursor = this.previousBodyCursor;
+      document.body.style.userSelect = this.previousBodyUserSelect;
+      window.removeEventListener("pointermove", this.handleResize);
+      window.removeEventListener("pointerup", this.endResize);
+      window.removeEventListener("pointercancel", this.endResize);
+    },
+    resizeWithKeyboard(event) {
+      const step = event.shiftKey ? 32 : 16;
+      const nextWidths = {
+        ArrowLeft: this.sidebarWidth - step,
+        ArrowRight: this.sidebarWidth + step,
+        Home: this.minSidebarWidth,
+        End: this.maxSidebarWidth,
+      };
+      if (!(event.key in nextWidths)) return;
+      event.preventDefault();
+      this.sidebarWidth = this.clampSidebarWidth(nextWidths[event.key]);
     },
   },
 };
@@ -90,13 +184,16 @@ export default {
   transition: width 0.25s ease;
   flex-shrink: 0;
 }
+.sidebar-wrapper.resizing .vue-aside {
+  transition: none;
+}
 
 .aside-content {
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 260px;
+  width: 100%;
   overflow-y: auto;
 }
 
@@ -169,6 +266,31 @@ export default {
   padding: 0 5px !important;
   height: 18px !important;
   line-height: 18px !important;
+}
+.sidebar-resizer {
+  position: relative;
+  z-index: 20;
+  flex: 0 0 8px;
+  width: 8px;
+  margin: 0 -4px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.sidebar-resizer::before {
+  content: "";
+  position: absolute;
+  inset: 0 3px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.sidebar-resizer:hover::before,
+.sidebar-resizer:focus-visible::before,
+.sidebar-resizer.active::before {
+  background: #41b883;
+}
+.sidebar-resizer:focus-visible {
+  outline: 2px solid #41b883;
+  outline-offset: -2px;
 }
 .sidebar-toggle-rail {
   flex: 0 0 28px;
